@@ -1,2 +1,2 @@
 # percept-dither
-Perceptual (OKLrAB) Based Color Space Dither
+Perceptual (OkLrAB) Based Color Space Dither

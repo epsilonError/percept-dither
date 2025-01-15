@@ -1,0 +1,19 @@
+{
+  "name": "percept-dither",
+  "version": "0.0.0",
+  "description": "Perceptual (OkLrAB) Based Color Space Dither",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "epsilonError",
+  "license": "BlueOak-1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/epsilonError/percept-dither.git"
+  },
+  "bugs": {
+    "url": "https://github.com/epsilonError/percept-dither/issues"
+  },
+  "homepage": "https://github.com/epsilonError/percept-dither#readme"
+}
