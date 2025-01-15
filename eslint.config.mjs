@@ -13,7 +13,8 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        tsconfigRootDir: import.meta.dirname, // requires node >= 20.11.0
       },
     },
   },
