@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "add-change": "git update-index --again",
-    "before-commit": "npm run lint:fix && npm run format:fix && npm run add-change",
+    "before-commit": "npm run format:fix && npm run lint:fix && npm run add-change",
     "check": "npm run format && npm run lint",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "husky"
