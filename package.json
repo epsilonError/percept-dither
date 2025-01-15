@@ -4,7 +4,15 @@
   "description": "Perceptual (OkLrAB) Based Color Space Dither",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "format": "npx prettier . -c",
+    "format:fix": "npx prettier . -w",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "add-change": "git update-index --again",
+    "before-commit": "npm run lint:fix && npm run format:fix && npm run add-change",
+    "check": "npm run format && npm run lint",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
   },
   "author": "epsilonError",
   "license": "BlueOak-1.0.0",
@@ -24,6 +32,7 @@
     "@types/node": "^22.10.6",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
+    "husky": "^9.1.7",
     "prettier": "3.4.2",
     "typescript": "~5.4.5",
     "typescript-eslint": "^8.20.0"
