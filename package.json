@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "description": "Perceptual (OkLrAB) Based Color Space Dither",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "format": "npx prettier . -c",
     "format:fix": "npx prettier . -w",
@@ -36,5 +37,8 @@
     "prettier": "3.4.2",
     "typescript": "~5.4.5",
     "typescript-eslint": "^8.20.0"
+  },
+  "dependencies": {
+    "colorjs.io": "^0.6.0-alpha.1"
   }
 }
