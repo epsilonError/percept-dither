@@ -14,7 +14,7 @@ In progress grayscale, and palette dither, using [Color.js](https://colorjs.io/)
 
 - Decker's [readcolor](https://github.com/JohnEarnest/Decker/blob/f423c9a7ccb690bf9f08584b6fea3a3fe53be829/js/lil.js#L1041-L1054) and [image_dither](https://github.com/JohnEarnest/Decker/blob/f423c9a7ccb690bf9f08584b6fea3a3fe53be829/js/lil.js#L1542-L1548) implementations
 - [Atkinson Dithering](https://beyondloom.com/blog/dither.html)
-- [Remersma Dithering](https://www.compuphase.com/riemer.htm)
+- [Riemersma Dithering](https://www.compuphase.com/riemer.htm)
 
 ### See Also
 
