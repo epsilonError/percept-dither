@@ -13,9 +13,9 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         projectService: true,
-
         tsconfigRootDir: import.meta.dirname, // requires node >= 20.11.0
       },
     },
   },
+  { ignores: ["dist/"] },
 );
