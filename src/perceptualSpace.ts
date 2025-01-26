@@ -75,6 +75,7 @@ console.log(
 );
 
 console.log('\n===== 16 evenly spaced OKLr Grays in sRGB =====');
+const grays16: Map<number, number> = new Map<number, number>();
 for (let i = 15; i >= 0; i--) {
   const gray = { ...grayPercept, coords: [i / 15, 0, 0] as Position };
   const sRGBGray =
@@ -88,7 +89,40 @@ for (let i = 15; i >= 0; i--) {
     'Hexcode:',
     serialize(sRGBGray, { format: 'hex' }),
   );
+  grays16.set(eightBitGray(sRGBGray.coords), gray.coords[0]);
 }
+
+console.log('\n===== 8-bit sRGB Grays as OKLr =====');
+let totalErr = 0;
+for (let i = 0; i < 256; i++) {
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const grayLr = convert(
+    { space: sRGB, coords: [i / 255, i / 255, i / 255] },
+    OKLrab,
+    { inGamut: true },
+  ).coords[0]!;
+  const diff =
+    grayLr -
+    (grays16.has(i - 1)
+      ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        grays16.get(i - 1)!
+      : grays16.has(i)
+        ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          grays16.get(i)!
+        : grays16.has(i + 1)
+          ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            grays16.get(i + 1)!
+          : NaN);
+  if (grays16.has(i)) {
+    console.log(grayLr, '* diff:', diff.toFixed(5), i);
+    totalErr += diff;
+  } else if (!Number.isNaN(diff)) {
+    console.log(grayLr, '  diff:', diff.toFixed(5));
+  } else {
+    console.log(grayLr);
+  }
+}
+console.log('Total Error:', totalErr);
 
 /*
 - Can we compile out the from and to matrices into linear matrices?
