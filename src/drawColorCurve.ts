@@ -26,6 +26,11 @@ const DECKER_DEFAULT_COLORS = [
   0xff0000ca, 0xff0097ff, 0xff00a800, 0xff006500, 0xff653600, 0xff976536,
   0xffb9b9b9, 0xff868686, 0xff454545, 0xff000000,
 ] as const;
+const GRAYSCALE_16_COLORS = [
+  0xffffffff, 0xffececec, 0xffd9d9d9, 0xffc7c7c7, 0xffb4b4b4, 0xffa2a2a2,
+  0xff919191, 0xff7f7f7f, 0xff6e6e6e, 0xff5e5e5e, 0xff4e4e4e, 0xff3e3e3e,
+  0xff2e2e2e, 0xff1e1e1e, 0xff0d0d0d, 0xff000000,
+] as const;
 function convertToRGB(n: number) {
   return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff] as [
     number,
@@ -36,6 +41,13 @@ function convertToRGB(n: number) {
 const defaultPalette = {
   *[Symbol.iterator]() {
     for (const c of DECKER_DEFAULT_COLORS) {
+      yield convertToRGB(c);
+    }
+  },
+};
+const sixteenGraysPalette = {
+  *[Symbol.iterator]() {
+    for (const c of GRAYSCALE_16_COLORS) {
       yield convertToRGB(c);
     }
   },
@@ -55,12 +67,19 @@ const paletteBitmaps = {
 
 interface Options {
   readonly blackAndWhite: boolean;
+  readonly grayscale: boolean;
   readonly color: boolean;
   readonly steps: number;
 }
-async function main(blackAndWhite = true, colors = false, steps = 30) {
+async function main(
+  blackAndWhite = true,
+  grayscale = true,
+  colors = false,
+  steps = 30,
+  grayColors = false,
+) {
   let i = 0;
-  if (blackAndWhite) {
+  if (blackAndWhite || grayscale) {
     console.log('Gen Grayscale Palette!');
     for await (const g of grayBitmaps) {
       grays[i] = g;
@@ -71,13 +90,15 @@ async function main(blackAndWhite = true, colors = false, steps = 30) {
   i = 0;
   if (colors) {
     console.log('Gen Color Palette');
-    for await (const c of paletteBitmaps) {
+    for await (const c of paletteBitmaps[Symbol.asyncIterator](
+      grayColors ? sixteenGraysPalette : defaultPalette,
+    )) {
       palette[i] = c;
       i++;
     }
   }
 
-  return { blackAndWhite: blackAndWhite, color: colors, steps } as const;
+  return { blackAndWhite, grayscale, color: colors, steps } as const;
 }
 
 let place = 0;
@@ -133,13 +154,15 @@ main()
   });
 
 function redrawCanvas(x: number, y: number, options: Options) {
-  if (!options.blackAndWhite && !options.color) {
+  if (!options.blackAndWhite && !options.grayscale && !options.color) {
     console.log('No palette to work from!');
     return;
   }
   const select = options.color
     ? Math.round(((16 - 1) / pixels) * place)
-    : Math.round(((256 - 1) / pixels) * place);
+    : options.grayscale
+      ? Math.round(((256 - 1) / pixels) * place)
+      : (place % 2) * (256 - 1);
 
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const bitmap = options.color ? palette[select]! : grays[select]!;
