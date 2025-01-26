@@ -62,17 +62,33 @@ console.log(
 console.log('\n===== OKLr middle point in sRGB =====');
 /* The middle point is all you need for 1-bit dither */
 const middleGray = { ...grayPercept, coords: [0.5, 0, 0] as Position };
-const middleSRBGray = convert(middleGray, sRGB, { inGamut: true });
+const middleSRGBGray = convert(middleGray, sRGB, { inGamut: true });
 console.log(
   'Perceptual Space Coord:',
   middleGray.coords,
   '\nsRGB Coord:            ',
-  middleSRBGray.coords,
+  middleSRGBGray.coords,
   '\n8-bit sRGB Gray Value: ',
-  eightBitGray(middleSRBGray.coords),
+  eightBitGray(middleSRGBGray.coords),
   '\nSerialized Hexcode:    ',
-  serialize(middleSRBGray, { format: 'hex' }),
+  serialize(middleSRGBGray, { format: 'hex' }),
 );
+
+console.log('\n===== 16 evenly spaced OKLr Grays in sRGB =====');
+for (let i = 15; i >= 0; i--) {
+  const gray = { ...grayPercept, coords: [i / 15, 0, 0] as Position };
+  const sRGBGray =
+    i === 15
+      ? convert(gray, sRGB, { inGamut: { space: sRGB, method: 'clip' } })
+      : convert(gray, sRGB, { inGamut: true });
+  console.log(
+    `${Math.abs(i - 16).toString(10)}.`,
+    'sRGB Gray Value:',
+    eightBitGray(sRGBGray.coords),
+    'Hexcode:',
+    serialize(sRGBGray, { format: 'hex' }),
+  );
+}
 
 /*
 - Can we compile out the from and to matrices into linear matrices?
