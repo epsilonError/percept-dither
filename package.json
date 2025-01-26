@@ -13,7 +13,10 @@
     "before-commit": "npm run format:fix && npm run lint:fix && npm run add-change",
     "check": "npm run format && npm run lint",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "husky"
+    "prepare": "husky",
+    "clean": "rm -rf ./dist",
+    "copy-demo": "cp ./src/index.html ./dist/src",
+    "build": "tsc && npm run copy-demo"
   },
   "author": "epsilonError",
   "license": "BlueOak-1.0.0",
