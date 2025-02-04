@@ -50,7 +50,7 @@ const rewrite: Record<
 } as const;
 
 /** Generates the Hilbert Curve for the given order */
-function* hilbertCurve(order = 1): Generator<string, void> {
+export function* hilbertCurve(order = 1): Generator<string, void> {
   if (order < 0) return;
   if (order === 0) {
     yield 'λ';
@@ -130,30 +130,3 @@ for (const [x, y] of positions(width, height)) {
   oldY = y;
 }
 console.log(' Finished Traversing.\n');
-
-/* Check that all positions are traveled and visited only once */
-const counter = new Map<[number, number], number>();
-for (const c of positions(width, height)) {
-  counter.set(c, counter.get(c) ?? 0 + 1);
-}
-console.log(
-  'Every pixel has been traversed: ',
-  counter.size === width * height,
-);
-console.log(
-  'Pixels with multiple traversals:',
-  Array.from(counter.entries()).filter((e) => e[1] !== 1),
-);
-
-/* Check number of traversals = (2^(2 * order)) - 1 */
-function countGos(a: Iterable<string>) {
-  return Array.from(a).filter((c) => c === '▶').length;
-}
-console.log('\n===== Curve Traversal Counts =====');
-console.log('0th Order    (1 pixel ):', countGos(hilbertCurve(0))); // 1
-console.log('1st Order    (4 pixels):', countGos(hilbertCurve(1))); // 4
-console.log('2nd Order   (16 pixels):', countGos(hilbertCurve(2))); // 16
-console.log('3rd Order   (64 pixels):', countGos(hilbertCurve(3))); // 64
-console.log('4th Order  (256 pixels):', countGos(hilbertCurve(4))); // 256
-console.log('5th Order (1024 pixels):', countGos(hilbertCurve(5))); // 1024
-console.log('6th Order (4096 pixels):', countGos(hilbertCurve(6))); // 4096 Decker max size
