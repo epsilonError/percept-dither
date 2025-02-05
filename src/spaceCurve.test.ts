@@ -1,15 +1,54 @@
 import { describe, expect, test } from 'vitest';
 import { hilbertCurve, positions } from './spaceCurve.ts';
 
+type Position = [number, number];
+interface Traversal {
+  src: Position;
+  dest: Position;
+}
+function* countArrayValues<K, V>(iterator: Iterable<[K, V[]]>) {
+  for (const [k, v] of iterator) {
+    yield [k, v.length] as [K, number];
+  }
+}
+
 const [width, height] = [583, 623];
 
 describe('Space Coverage', () => {
   describe(`Size ${width.toString(10)}×${height.toString(10)}`, () => {
-    const counter = new Map<[number, number], number>();
-    for (const c of positions(width, height)) {
-      counter.set(c, counter.get(c) ?? 0 + 1);
+    /** The number of times a Position has been visited */
+    const counter = new Map<Position, number>();
+    /** Distance traveled in a single step and the traversals that did */
+    const distanceStepped = new Map<number, Traversal[]>();
+    /** Traversals that changed 2, or 0, axis in a single step */
+    const not1AxisChange: Traversal[] = [];
+
+    let oldX = -1,
+      oldY = 0;
+    for (const pos of positions(width, height)) {
+      const [x, y] = pos;
+      const traverse: Traversal = { src: [oldX, oldY], dest: pos };
+      const Δx = Math.abs(oldX - x),
+        Δy = Math.abs(oldY - y),
+        d = Math.sqrt(Δx ** 2 + Δy ** 2);
+
+      // Collect visits
+      counter.set(pos, counter.get(pos) ?? 0 + 1);
+
+      // Collect distances traveled in a single step
+      const update = distanceStepped.get(d) ?? [];
+      update.push(traverse);
+      distanceStepped.set(d, update);
+
+      // Steps should change either X or Y position, not neither nor both
+      if (!(Δx ^ Δy)) {
+        not1AxisChange.push(traverse);
+      }
+
+      oldX = x;
+      oldY = y;
     }
-    test('Equivalent Pixels and Positions', () => {
+    test('Equivalent number of Pixels and Positions', () => {
       expect(counter.size).toEqual(width * height);
     });
     test('Positions have only been visited once', () => {
@@ -18,55 +57,23 @@ describe('Space Coverage', () => {
       );
     });
     describe('Space Traversal', () => {
-      type Position = [number, number];
-      interface Traversal {
-        src: Position;
-        dest: Position;
-      }
       /* Check that successive positions are only one point apart (fails to test edges) */
-      const distanceStepped = new Map<number, Traversal[]>();
-      const not1AxisChange: Traversal[] = [];
-      let oldX = -1,
-        oldY = 0;
-      for (const [x, y] of positions(width, height)) {
-        const traverse: Traversal = { src: [oldX, oldY], dest: [x, y] };
-        const Δx = Math.abs(oldX - x),
-          Δy = Math.abs(oldY - y),
-          d = Math.sqrt(Δx ** 2 + Δy ** 2);
-
-        // Collect distances traveled in a single step
-        const update = distanceStepped.get(d) ?? [];
-        update.push(traverse);
-        distanceStepped.set(d, update);
-
-        if (!(Δx ^ Δy)) {
-          // Steps should change either X or Y position, not neither nor both
-          not1AxisChange.push(traverse);
-        }
-        oldX = x;
-        oldY = y;
-      }
       test('Only 1 of X or Y should change per traversal', () => {
         expect(not1AxisChange).toEqual([]);
       });
-      function* count<K, V>(iterator: Iterable<[K, V[]]>) {
-        for (const [k, v] of iterator) {
-          yield [k, v.length] as [K, number];
-        }
-      }
       test('Steps of length 1 are the majority', () => {
-        let distance1 = 0,
-          distanceOther = 0;
-        for (const [distance, c] of count(distanceStepped)) {
+        let length1 = 0,
+          lengthOther = 0;
+        for (const [distance, c] of countArrayValues(distanceStepped)) {
           if (distance === 1) {
-            distance1 += c;
+            length1 += c;
           } else {
-            distanceOther += c;
+            lengthOther += c;
           }
         }
-        expect(distance1).toBeGreaterThan(distanceOther);
-        expect(distance1 / distanceOther).toBeGreaterThan(0.5);
-        expect(distanceOther / (distance1 + distanceOther)).toBeLessThan(0.001);
+        expect(length1).toBeGreaterThan(lengthOther);
+        expect(length1 / lengthOther).toBeGreaterThan(0.5);
+        expect(lengthOther / (length1 + lengthOther)).toBeLessThan(0.001);
       });
     });
   });
