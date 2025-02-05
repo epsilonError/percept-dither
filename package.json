@@ -16,7 +16,7 @@
     "before-commit": "npm run format:fix && npm run lint:fix && npm run add-change && npm run test:ci",
     "check": "npm run format && npm run lint && npm run test:ci",
     "test": "vitest --typecheck",
-    "test:ci": "vitest run --typecheck",
+    "test:ci": "vitest run --silent --typecheck",
     "prepare": "husky",
     "clean": "rm -rf ./dist"
   },
