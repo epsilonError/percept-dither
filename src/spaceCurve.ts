@@ -101,32 +101,3 @@ export function* positions(width: number, height: number) {
     }
   }
 }
-
-/* Test Values */
-const [width, height] = [583, 623];
-
-console.log('===== Canvas Size Tests =====');
-console.log('[width, height]:', [width, height]);
-
-console.log(' Traversing Rect...');
-/* Check that successive positions are only one point apart (fails to test edges)*/
-let oldX = -1,
-  oldY = 0;
-for (const [x, y] of positions(width, height)) {
-  const Δx = Math.abs(oldX - x),
-    Δy = Math.abs(oldY - y),
-    d = Δx + Δy;
-  if (d !== 1 && d > 3) {
-    console.log(
-      `  Long Step (${d.toString(10)} pixels)! [${oldX.toString(10)}, ${oldY.toString(10)}] => [${x.toString(10)}, ${y.toString(10)}]`,
-    );
-  }
-  if (!(Δx ^ Δy)) {
-    console.log(
-      `  Only one of X or Y should change! [${oldX.toString(10)}, ${oldY.toString(10)}] => [${x.toString(10)}, ${y.toString(10)}]`,
-    );
-  }
-  oldX = x;
-  oldY = y;
-}
-console.log(' Finished Traversing.\n');
