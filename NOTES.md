@@ -27,6 +27,7 @@ Riemersma Dither:
 - Hilbert curves generally fill square 2D spaces with sides that are a power of 2
 - [gilbert curve](https://github.com/jakubcerveny/gilbert) generalizes Hilbert curves to arbitrarily sized 2D rectangles
 - It's probably possible to just cut a Hilbert curve to size, but that's a lot of extraneous positions (always O(n²) for the larger side)
+- Hilbert curves can be implemented as a closed loop. Looping could be a good way to make sure errors are better diffused. (Implementing a closed loop gilbert curve would be especially useful)
 
 # Implementation Ideas
 
