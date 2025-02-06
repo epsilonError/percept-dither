@@ -62,7 +62,7 @@ export function* hilbertCurve(order = 1): Generator<string, void> {
 }
 
 /** Generates valid positions in the given 2D space that follows a Hilbert Curve */
-export function* positions(width: number, height: number) {
+export function* hilbertPositions(width: number, height: number) {
   if (
     width <= 0 ||
     height <= 0 ||
