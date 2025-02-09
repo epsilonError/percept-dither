@@ -22,48 +22,9 @@
 //       - Every ⬚ needs to be provided an entry position, and bounding box
 //       - When a box fills, jump to the next box and its entry position
 
+import { mMultiply, translate as move, iota } from './mathUtils';
+
 type Position = [number, number];
-
-/**
- * @param base 2-array
- * @param matrix 2×2 row-ordered matrix as flattened 4-array
- * @param inplace pass the same position array as base to change in-place
- * @returns matrix pre-multiplication
- */
-function mult(
-  base: Position,
-  matrix: [number, number, number, number],
-  inplace: Position = [0, 0],
-) {
-  const x = base[0] * matrix[0] + base[1] * matrix[2];
-  const y = base[0] * matrix[1] + base[1] * matrix[3];
-
-  inplace[0] = x;
-  inplace[1] = y;
-
-  return inplace;
-}
-
-function* iota(n: number) {
-  for (let i = 0; i < n; i++) {
-    yield i;
-  }
-}
-
-function move(
-  position: Position,
-  basis: Position,
-  times: number,
-  inplace: Position = [0, 0],
-): Position {
-  const x = position[0] + basis[0] * times;
-  const y = position[1] + basis[1] * times;
-
-  inplace[0] = x;
-  inplace[1] = y;
-
-  return inplace;
-}
 
 export function* gilbertPositions(width: number, height: number) {
   if (
@@ -78,12 +39,12 @@ export function* gilbertPositions(width: number, height: number) {
     ortho: Position = [0, 1];
 
   const reflect = () => {
-    mult(major, [0, 1, 1, 0], major);
-    mult(ortho, [0, 1, 1, 0], ortho);
+    mMultiply(major, [0, 1, 1, 0], major);
+    mMultiply(ortho, [0, 1, 1, 0], ortho);
   };
   const negReflect = () => {
-    mult(major, [0, -1, -1, 0], major);
-    mult(ortho, [0, -1, -1, 0], ortho);
+    mMultiply(major, [0, -1, -1, 0], major);
+    mMultiply(ortho, [0, -1, -1, 0], ortho);
   };
 
   function* gilbert(
@@ -96,13 +57,13 @@ export function* gilbertPositions(width: number, height: number) {
     if (height === 1) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for (const _ of iota(width)) {
-        yield structuredClone(entry);
+        yield [...entry];
         move(entry, major, 1, entry);
       }
     } else if (width === 1) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for (const _ of iota(height)) {
-        yield structuredClone(entry);
+        yield [...entry];
         move(entry, ortho, 1, entry);
       }
     } else if (2 * width > 3 * height) {
@@ -110,7 +71,7 @@ export function* gilbertPositions(width: number, height: number) {
         hWidth += 1;
       }
 
-      yield* gilbert(structuredClone(entry), hWidth, height);
+      yield* gilbert([...entry], hWidth, height);
       yield* gilbert(move(entry, major, hWidth), width - hWidth, height);
     } else if (2 * width <= 3 * height) {
       if (hHeight % 2 && height > 2) {

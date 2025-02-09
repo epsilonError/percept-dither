@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { R, zeroH, fiveH, HH } from './hilbertSet.ts';
+import { iota } from './mathUtils.ts';
 
 // Testing Types
 type Alphabet = 'u' | 'd' | 'l' | 'r';
@@ -34,7 +35,8 @@ const INVALID_ORDERS = [
 ] as const;
 
 // Testing Utility Functions
-function store(word: Iterable<string>) {
+function store(word: Iterable<string> | undefined) {
+  if (word === undefined) return '';
   return Array.from(word).join('');
 }
 function iter(word: string) {
@@ -60,10 +62,11 @@ describe('Generated Word Tests', () => {
   });
   test('∀ v ≤ 5, ᵥH₂ is Correct', () => {
     const allSecondOrders = [...firstOrder, ...secondOrder] as const;
-    allSecondOrders.forEach((curve, idx) => {
-      expect(store(curve(2))).toEqual(H2s[idx]);
-    });
+    for (const i of iota(allSecondOrders.length)) {
+      expect(store(allSecondOrders[i]?.(2))).toEqual(H2s[i]);
+    }
   });
+
   test('∀ v > 5, ᵥH₂ is ₅H₂', () => {
     for (const curve of thirdOrder) {
       expect(store(curve(2))).toEqual(store(fiveH(2)));
