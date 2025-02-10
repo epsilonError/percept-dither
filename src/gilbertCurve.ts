@@ -22,9 +22,7 @@
 //       - Every ⬚ needs to be provided an entry position, and bounding box
 //       - When a box fills, jump to the next box and its entry position
 
-import { mMultiply, translate as move, iota } from './mathUtils';
-
-type Position = [number, number];
+import { mMultiply, translate as move, iota, type Point } from './mathUtils';
 
 export function* gilbertPositions(width: number, height: number) {
   if (
@@ -35,23 +33,23 @@ export function* gilbertPositions(width: number, height: number) {
   ) {
     return;
   }
-  const major: Position = [1, 0],
-    ortho: Position = [0, 1];
+  const major: Point = [1, 0],
+    ortho: Point = [0, 1];
 
   const reflect = () => {
-    mMultiply(major, [0, 1, 1, 0], major);
-    mMultiply(ortho, [0, 1, 1, 0], ortho);
+    mMultiply([0, 1, 1, 0], major, major);
+    mMultiply([0, 1, 1, 0], ortho, ortho);
   };
   const negReflect = () => {
-    mMultiply(major, [0, -1, -1, 0], major);
-    mMultiply(ortho, [0, -1, -1, 0], ortho);
+    mMultiply([0, -1, -1, 0], major, major);
+    mMultiply([0, -1, -1, 0], ortho, ortho);
   };
 
   function* gilbert(
-    entry: Position,
+    entry: Point,
     width: number,
     height: number,
-  ): Generator<Position, void> {
+  ): Generator<Point, void> {
     let hWidth = Math.trunc(width / 2);
     let hHeight = Math.trunc(height / 2);
     if (height === 1) {
