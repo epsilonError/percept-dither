@@ -33,6 +33,14 @@ const INVALID_ORDERS = [
   Number.MAX_VALUE,
   Infinity,
 ] as const;
+const thirdOrderH4s = [
+  'luruuldlulddrdlddrurrdldrdlluldluldllurulurrdruuuldllurulurrdruuuldllurulurrdruuuldllurulurrdrurdrurrdldrdllulddrdlddrurdruulurrrdlddrurdruuluruuldllurulurrdrurdrurrdldrdlluldddrurrdldrdlluldddrurrdldrdlluldddrurrdldrdlluldluldllurulurrdruuluruuldlulddrdl',
+  'luruuldlulddrdlddrurrdldrdlluldluldllurulurrdruuuldllurulurrdruuuldllurulurrdruuuldllurulurrdrurdrurrdldrdllulddrdlddrurdruulurrrdlddrurdruuluruuldllurulurrdrurdrurrdldrdlluldddrurrdldrdlluldddrurrdldrdlluldlluruuldlulddrdldrdlddrurdruulurrrdlddrurdruulur',
+  'rdlddrurdruulurrrdlddrurdruuluruluruuldlulddrdlluldllurulurrdruuuldllurulurrdruuuldllurulurrdrurdrurrdldrdllulddrdlddrurdruulurrrdlddrurdruuluruuldllurulurrdrurdrurrdldrdlluldddrurrdldrdlluldddrurrdldrdlluldlluruuldlulddrdldrdlddrurdruulurrrdlddrurdruulur',
+  'ldrddluldluurullldrddluldluuruluruluurdrurddldrrurdrrulurulldluuurdrrulurulldlulldrddluldluuruluruluurdrurddldrrruluurdrurddldrrruluurdrurddldrrruluurdrurddldrdldrddluldluurulldlulldrdldrrurdddlulldrdldrrurdrruluurdrurddldrdldrddluldluurullldrddluldluurul',
+  'ruluurdrurddldrddlulldrdldrrurdrurdrrulurulldluuurdrrulurulldluuurdrrulurulldlulldrddluldluuruluruluurdrurddldrrruluurdrurddldrrruluurdrurddldrrruluurdrurddldrdldrddluldluurulldlulldrdldrrurdddlulldrdldrrurdddlulldrdldrrurdrurdrrulurulldluuruluurdrurddldr',
+  'ruluurdrurddldrddlulldrdldrrurdrurdrrulurulldluuurdrrulurulldluuurdrrulurulldlulldrddluldluuruluruluurdrurddldrrruluurdrurddldrrruluurdrurddldrrruluurdrurddldrdldrddluldluurulldlulldrdldrrurdddlulldrdldrrurdrruluurdrurddldrdldrddluldluurullldrddluldluurul',
+] as const;
 
 // Testing Utility Functions
 function store(word: Iterable<string> | undefined) {
@@ -66,7 +74,13 @@ describe('Generated Word Tests', () => {
       expect(store(allSecondOrders[i]?.(2))).toEqual(H2s[i]);
     }
   });
-
+  test('∀ v; 5 < v ≤ 11, ᵥH₄ is Correct', () => {
+    for (const i of iota(thirdOrder.length)) {
+      const a = store(thirdOrder[i]?.(4));
+      const b = thirdOrderH4s[i];
+      expect(a.slice(0, b?.length)).toEqual(thirdOrderH4s[i]);
+    }
+  });
   test('∀ v > 5, ᵥH₂ is ₅H₂', () => {
     for (const curve of thirdOrder) {
       expect(store(curve(2))).toEqual(store(fiveH(2)));

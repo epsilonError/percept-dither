@@ -41,19 +41,27 @@ const δm: Morphism = { u: d, r: r, d: u, l: l } as const;
 const δy: Morphism = { u: u, r: l, d: d, l: r } as const;
 const swap: Morphism = { u: d, r: l, d: u, l: r } as const;
 
+//prettier-ignore
+/**
+ * Tag System in based mostly on Estevez-Rams et al. (mentioned above), with a correction from
+ * THE COMPLETE SET OF HOMOGENEOUS HILBERT CURVES IN TWO DIMENSIONS by C. Pérez-Demydenko et al.
+ * for Q0 of ₁₁H (is δm, not δa). And this implementation's tests show that Q3 of ₆H should be
+ * δm (not δa nor δf as stated in the papers).
+ */
 const tagSystem: TagSystem = {
-  0: (pre) => [δ(δo, pre()), u, pre(), r, pre(), d, δ(δa, pre())],
-  1: (pre) => [δ(δg, pre()), u, δ(δg, pre()), r, δ(δx, pre()), d, δ(δx, pre())],
-  2: (pre) => [δ(δf, pre()), u, pre(), r, pre(), d, δ(δf, pre())],
-  3: (pre) => [δ(δm, pre()), u, δ(δg, pre()), r, δ(δx, pre()), d, δ(δm, pre())],
-  4: (pre) => [δ(δo, pre()), u, pre(), r, pre(), d, δ(δf, pre())],
-  5: (pre) => [δ(δm, pre()), u, δ(δg, pre()), r, δ(δx, pre()), d, δ(δx, pre())],
-  6: (pre) => [δ(δf, pre()), u, R(δ(δy, pre())), r, pre(), d, R(δ(δa, pre()))],
-  7: (pre) => [δ(δf, pre()), u, R(δ(δy, pre())), r, pre(), d, δ(δa, pre())],
-  8: (pre) => [R(δ(δx, pre())), u, R(δ(δy, pre())), r, pre(), d, δ(δa, pre())],
-  9: (p) => [R(δ(δa, p())), u, δ(δg, p()), r, R(δ(δo, p())), d, δ(δx, p())],
-  10: (p) => [δ(δa, p()), u, δ(δg, p()), r, R(δ(δo, p())), d, R(δ(δx, p()))],
-  11: (p) => [δ(δa, p()), u, δ(δg, p()), r, R(δ(δo, p())), d, δ(δx, p())],
+  //            === Quad 0 ===      === Quad 1 ===      === Quad 2 ===      === Quad 3 ===
+  0:  (prev) => [  δ(δo, prev()),  u,         prev(),   r,         prev(),   d,   δ(δa, prev()) ],
+  1:  (prev) => [  δ(δg, prev()),  u,   δ(δg, prev()),  r,   δ(δx, prev()),  d,   δ(δx, prev()) ],
+  2:  (prev) => [  δ(δf, prev()),  u,         prev(),   r,         prev(),   d,   δ(δf, prev()) ],
+  3:  (prev) => [  δ(δm, prev()),  u,   δ(δg, prev()),  r,   δ(δx, prev()),  d,   δ(δm, prev()) ],
+  4:  (prev) => [  δ(δo, prev()),  u,         prev(),   r,         prev(),   d,   δ(δf, prev()) ],
+  5:  (prev) => [  δ(δm, prev()),  u,   δ(δg, prev()),  r,   δ(δx, prev()),  d,   δ(δx, prev()) ],
+  6:  (prev) => [  δ(δf, prev()),  u, R(δ(δy, prev())), r,         prev(),   d, R(δ(δm, prev()))],
+  7:  (prev) => [  δ(δf, prev()),  u, R(δ(δy, prev())), r,         prev(),   d,   δ(δa, prev()) ],
+  8:  (prev) => [R(δ(δx, prev())), u, R(δ(δy, prev())), r,         prev(),   d,   δ(δa, prev()) ],
+  9:  (prev) => [R(δ(δa, prev())), u,   δ(δg, prev()),  r, R(δ(δo, prev())), d,   δ(δx, prev()) ],
+  10: (prev) => [  δ(δm, prev()),  u,   δ(δg, prev()),  r, R(δ(δo, prev())), d, R(δ(δf, prev()))],
+  11: (prev) => [  δ(δm, prev()),  u,   δ(δg, prev()),  r, R(δ(δo, prev())), d,   δ(δx, prev()) ],
 } as const;
 
 /** Reversion Operator (Reverse and Swap Direction) */
