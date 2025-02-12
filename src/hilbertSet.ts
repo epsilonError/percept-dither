@@ -49,7 +49,7 @@ const swap: Morphism = { u: d, r: l, d: u, l: r } as const;
  * δm (not δa nor δf as stated in the papers).
  */
 const tagSystem: TagSystem = {
-  //            === Quad 0 ===      === Quad 1 ===      === Quad 2 ===      === Quad 3 ===
+  //             === Quad 0 ===       === Quad 1 ===       === Quad 2 ===       === Quad 3 ===
   0:  (prev) => [  δ(δo, prev()),  u,         prev(),   r,         prev(),   d,   δ(δa, prev()) ],
   1:  (prev) => [  δ(δg, prev()),  u,   δ(δg, prev()),  r,   δ(δx, prev()),  d,   δ(δx, prev()) ],
   2:  (prev) => [  δ(δf, prev()),  u,         prev(),   r,         prev(),   d,   δ(δf, prev()) ],
