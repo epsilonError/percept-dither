@@ -4,15 +4,15 @@
 
 // Based on HILBERT CURVES IN TWO DIMENSIONS by Estevez-Rams et al.
 
-type Alphabet = 'u' | 'd' | 'l' | 'r';
+export type Alphabet = 'u' | 'd' | 'l' | 'r';
 type IterAlphabet = Iterable<Alphabet>;
-type GenAlphabet = Generator<Alphabet, void>;
+export type GenAlphabet = Generator<Alphabet, void>;
 type Mapping = (order: number) => IterAlphabet;
 type Morphism = Record<
   Alphabet,
   { readonly [Symbol.iterator]: () => GenAlphabet }
 >;
-type HHCurve = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+export type HHCurve = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
 type TagSystem = Record<
   HHCurve,
   (prev: () => GenAlphabet) => Parameters<typeof pipe>
