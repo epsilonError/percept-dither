@@ -51,7 +51,9 @@ describe('Color Conversion', () => {
   });
   test(`${colorName} 8-bit sRGB Grayscale Value`, () => {
     expect(eightBitGrayValue).toEqual(136);
-    expect(sRGBgrayscale(color.coords as Position)).toEqual(136);
+    expect(sRGBgrayscale(...(color.coords as Position))).toEqual([
+      136, 136, 136,
+    ]);
   });
   test(`${colorName} Grayscale Serialized Hex Code`, () => {
     expect(serialize(grayscale, { format: 'hex' })).toEqual('#888');
