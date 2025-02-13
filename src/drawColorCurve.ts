@@ -1,4 +1,5 @@
-import { positions } from './spaceCurve.js';
+import { gilbertPositions } from './gilbertCurve.ts';
+import { hilbertPositions } from './hilbertCurve.ts';
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -7,7 +8,8 @@ const canvasWidth = 512;
 const canvasHeight = 342;
 const pixels = canvasWidth * canvasHeight;
 
-const pos = positions(canvasWidth, canvasHeight);
+/*const pos =*/ hilbertPositions(canvasWidth, canvasHeight);
+const pos = gilbertPositions(canvasWidth, canvasHeight);
 
 // Generate an array of 256 individual Bitmap grays
 const grays = new Array<ImageBitmap>(256);
