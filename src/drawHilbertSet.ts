@@ -22,7 +22,8 @@ import {
 type MatrixTransform = 'I' | 'R' | 'V' | 'H';
 type VecTransform = 0 | 1 | 2 | 3 | 4 | 5;
 type Affine = [Matrix, Point] | [Matrix, Point, 'R'];
-type AffineTransforms = Record<'q0' | 'q3', Affine>;
+type Quadrant = 'q0' | 'q3';
+type AffineTransforms = Record<Quadrant, Affine>;
 
 /** Affine Transform U Matrices */
 const U: Record<MatrixTransform, Matrix> = {
@@ -46,20 +47,21 @@ function neg(m: Matrix) {
   return sMatrix(-1, m);
 }
 
+//prettier-ignore
 /** Affine Transformations for Curve & Quadrant */
 const p: Record<HHCurve, AffineTransforms> = {
-  0: { q0: [U.R, t['0']], q3: [neg(U.R), t['4']] } as const,
-  1: { q0: [U.V, t['2']], q3: [neg(U.V), t['3']] } as const,
-  2: { q0: [neg(U.I), t['3']], q3: [neg(U.I), t['4']] } as const,
-  3: { q0: [U.H, t['1']], q3: [U.H, t['3']] } as const,
-  4: { q0: [U.R, t['0']], q3: [neg(U.I), t['4']] } as const,
-  5: { q0: [U.H, t['1']], q3: [neg(U.V), t['3']] } as const,
-  6: { q0: [neg(U.I), t['3']], q3: [U.H, t['3'], 'R'] } as const,
-  7: { q0: [neg(U.I), t['3']], q3: [neg(U.R), t['4']] } as const,
-  8: { q0: [neg(U.V), t['1'], 'R'], q3: [neg(U.R), t['4']] } as const,
-  9: { q0: [neg(U.R), t['3'], 'R'], q3: [neg(U.V), t['3']] } as const,
-  10: { q0: [U.H, t['1']], q3: [neg(U.I), t['4'], 'R'] } as const,
-  11: { q0: [U.H, t['1']], q3: [neg(U.V), t['3']] } as const,
+  0:  { q0: [    U.R,  t['0']],      q3: [neg(U.R), t['4']]      } as const,
+  1:  { q0: [    U.V,  t['2']],      q3: [neg(U.V), t['3']]      } as const,
+  2:  { q0: [neg(U.I), t['3']],      q3: [neg(U.I), t['4']]      } as const,
+  3:  { q0: [    U.H,  t['1']],      q3: [    U.H,  t['3']]      } as const,
+  4:  { q0: [    U.R,  t['0']],      q3: [neg(U.I), t['4']]      } as const,
+  5:  { q0: [    U.H,  t['1']],      q3: [neg(U.V), t['3']]      } as const,
+  6:  { q0: [neg(U.I), t['3']],      q3: [    U.H,  t['3'], 'R'] } as const,
+  7:  { q0: [neg(U.I), t['3']],      q3: [neg(U.R), t['4']]      } as const,
+  8:  { q0: [neg(U.V), t['1'], 'R'], q3: [neg(U.R), t['4']]      } as const,
+  9:  { q0: [neg(U.R), t['3'], 'R'], q3: [neg(U.V), t['3']]      } as const,
+  10: { q0: [    U.H,  t['1']],      q3: [neg(U.I), t['4'], 'R'] } as const,
+  11: { q0: [    U.H,  t['1']],      q3: [neg(U.V), t['3']]      } as const,
 };
 
 /** Apply the Affine Transformation */
@@ -93,6 +95,25 @@ function* transformSteps(
   }
 }
 
+export function absScale(point: Point, order: number, quad: Quadrant): Point {
+  const length = 2 ** order;
+  const quadLength = order < 1 ? 0 : length / 2;
+
+  const newPoint = sVec(quadLength > 2 ? 2 : quadLength, point);
+  if (order > 2) {
+    sVec(quadLength - 1, newPoint, newPoint);
+    if (!Number.isSafeInteger(newPoint[1])) {
+      const int = Math.trunc(newPoint[1]);
+      newPoint[1] = int + ((newPoint[1] - int) * quadLength) / 2;
+    }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (quad) {
+    /* empty */
+  }
+  return newPoint;
+}
+
 export function genSVGPath(
   curve: HHCurve,
   order: number,
@@ -100,9 +121,6 @@ export function genSVGPath(
 ) {
   // TODO: Find Boundary Vectors
   const hCurve = gen ?? HH(curve);
-  const points = 2 ** (2 * order);
-  const quadPoints = order < 1 ? 0 : points / 4;
-  const quadSidePoints = Math.sqrt(quadPoints);
   const entryPointQ0: Point = [0, 0],
     exitPointQ0: Point = [0, 0],
     entryPointQ3: Point = [0, 0],
@@ -134,19 +152,21 @@ export function genSVGPath(
     entryPointQ0,
     'Q0 Exit:',
     exitPointQ0,
-    'Points/QuadSide:',
-    quadSidePoints,
+    'Guess:',
+    absScale(entryPointQ0, order, 'q0'),
+    absScale(exitPointQ0, order, 'q0'),
   );
   console.log(
     'Q3 Entry:',
     entryPointQ3,
     'Q3 Exit:',
     exitPointQ3,
-    'Points/QuadSide:',
-    quadSidePoints,
+    'Guess:',
+    absScale(entryPointQ3, order, 'q3'),
+    absScale(exitPointQ3, order, 'q3'),
   );
   return (
-    `M ${(entryPointQ0[0] * quadSidePoints).toString(10)} ${(entryPointQ0[1] * quadSidePoints).toString(10)} ` +
+    `M ${absScale(entryPointQ0, order, 'q0')[0].toString(10)} ${absScale(entryPointQ0, order, 'q0')[1].toString(10)} ` +
     Array.from(hCurve(order), alphabet2SVG).join(' ')
   );
 }
@@ -161,5 +181,5 @@ function alphabet2SVG(a: Alphabet): string {
 }
 
 for (const i of iota(12)) {
-  if (i > 5) console.log(genSVGPath(i as HHCurve, 3));
+  console.log(genSVGPath(i as HHCurve, 4));
 }
