@@ -7,9 +7,12 @@ const canvas2Width = 476;
 const canvas2Height = 600;
 const img = new Image(canvas2Width, canvas2Height);
 img.src = SARGENT_LIBRARY_IN_VENICE;
-const canvas3 = document.getElementById('canvasGrayscale') as HTMLCanvasElement;
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+const canvas3Context = (
+  document.getElementById('canvasGrayscale') as HTMLCanvasElement
+).getContext('bitmaprenderer')!;
 
-const offscreen = canvas3.transferControlToOffscreen();
+const offscreen = new OffscreenCanvas(canvas2Width, canvas2Height);
 const worker = new Worker(new URL('./perceptGrayWorker.ts', import.meta.url), {
   type: 'module',
 });
@@ -22,6 +25,9 @@ img.addEventListener('load', () => {
     canvas2Width,
     canvas2Height,
   );
+  worker.onmessage = (ev: MessageEvent<ImageBitmap>) => {
+    canvas3Context.transferFromImageBitmap(ev.data);
+  };
   worker.postMessage({ img: data, width, height, canvas: offscreen }, [
     offscreen,
   ]);

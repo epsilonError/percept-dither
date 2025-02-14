@@ -21,6 +21,7 @@ self.onmessage = (
     .then((bitmap) => {
       contextWorker?.drawImage(bitmap, 0, 0);
       bitmap.close();
+      postMessage(canvas.transferToImageBitmap());
     })
     .catch((e: unknown) => {
       console.error(e);
