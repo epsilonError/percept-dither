@@ -8,7 +8,7 @@ import {
 
 /**
  * Registers sRGB and OKLrAB ColorSpaces, if not already registered.
- * Needed to correctly Transfrom to and from sRGB and OKLrAB.
+ * Needed to correctly Transform to and from sRGB and OKLrAB.
  */
 export function registerColorSpaces() {
   const registered = new Set<string>(Object.keys(ColorSpace.registry));
