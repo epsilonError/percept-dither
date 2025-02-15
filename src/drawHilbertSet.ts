@@ -101,15 +101,21 @@ export function absScale(point: Point, order: number, quad: Quadrant): Point {
 
   const newPoint = sVec(quadLength > 2 ? 2 : quadLength, point);
   if (order > 2) {
-    sVec(quadLength - 1, newPoint, newPoint);
-    if (!Number.isSafeInteger(newPoint[1])) {
-      const int = Math.trunc(newPoint[1]);
-      newPoint[1] = int + ((newPoint[1] - int) * quadLength) / 2;
-    }
+    sVec(quadLength, newPoint, newPoint);
   }
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  if (quad) {
-    /* empty */
+
+  if (quad === 'q0') {
+    // Keep q0 in q0:
+    // 0 ≤ x ≤ quadLength - 1
+    // 0 ≤ y ≤ quadLength - 1
+    if (newPoint[0] !== 0 && newPoint[0] % quadLength === 0) newPoint[0] += -1;
+    if (newPoint[1] !== 0 && newPoint[1] % quadLength === 0) newPoint[1] += -1;
+  }
+  if (quad === 'q3') {
+    // keep q3 in q3:
+    // quadLength ≤ x ≤ 2 * quadLength - 1
+    // 0 ≤ y ≤ quadLength - 1
+    if (newPoint[1] !== 0 && newPoint[1] % quadLength === 0) newPoint[1] += -1;
   }
   return newPoint;
 }
@@ -146,25 +152,27 @@ export function genSVGPath(
       affine(exitPointQ3, p[stepCurve].q3, exitPointQ3);
     }
   }
-  console.log(`==== ${curve.toString(10)} H ${order.toString(10)} ====`);
-  console.log(
-    'Q0 Entry:',
-    entryPointQ0,
-    'Q0 Exit:',
-    exitPointQ0,
-    'Guess:',
-    absScale(entryPointQ0, order, 'q0'),
-    absScale(exitPointQ0, order, 'q0'),
-  );
-  console.log(
-    'Q3 Entry:',
-    entryPointQ3,
-    'Q3 Exit:',
-    exitPointQ3,
-    'Guess:',
-    absScale(entryPointQ3, order, 'q3'),
-    absScale(exitPointQ3, order, 'q3'),
-  );
+  if ((curve === 6 || curve === 8 || curve === 9) && order > 2) {
+    console.log(`==== ${curve.toString(10)} H ${order.toString(10)} ====`);
+    console.log(
+      'Q0 Entry:',
+      entryPointQ0,
+      'Q0 Exit:',
+      exitPointQ0,
+      'Guess:',
+      absScale(entryPointQ0, order, 'q0'),
+      absScale(exitPointQ0, order, 'q0'),
+    );
+    console.log(
+      'Q3 Entry:',
+      entryPointQ3,
+      'Q3 Exit:',
+      exitPointQ3,
+      'Guess:',
+      absScale(entryPointQ3, order, 'q3'),
+      absScale(exitPointQ3, order, 'q3'),
+    );
+  }
   return (
     `M ${absScale(entryPointQ0, order, 'q0')[0].toString(10)} ${absScale(entryPointQ0, order, 'q0')[1].toString(10)} ` +
     Array.from(hCurve(order), alphabet2SVG).join(' ')
@@ -181,5 +189,5 @@ function alphabet2SVG(a: Alphabet): string {
 }
 
 for (const i of iota(12)) {
-  console.log(genSVGPath(i as HHCurve, 4));
+  if (i === 8 || i === 9) console.log(genSVGPath(i as HHCurve, 4));
 }
