@@ -41,6 +41,13 @@ const thirdOrderH4s = [
   'ruluurdrurddldrddlulldrdldrrurdrurdrrulurulldluuurdrrulurulldluuurdrrulurulldlulldrddluldluuruluruluurdrurddldrrruluurdrurddldrrruluurdrurddldrrruluurdrurddldrdldrddluldluurulldlulldrdldrrurdddlulldrdldrrurdddlulldrdldrrurdrurdrrulurulldluuruluurdrurddldr',
   'ruluurdrurddldrddlulldrdldrrurdrurdrrulurulldluuurdrrulurulldluuurdrrulurulldlulldrddluldluuruluruluurdrurddldrrruluurdrurddldrrruluurdrurddldrrruluurdrurddldrdldrddluldluurulldlulldrdldrrurdddlulldrdldrrurdrruluurdrurddldrdldrddluldluurullldrddluldluurul',
 ] as const;
+const curve6 = [
+  '',
+  'urd',
+  'druulurrrdldrdl',
+  'ulddrdlllurulurulurulurrrdlddrurdruulurrrdldrdldrdldrdllluruuld',
+  thirdOrderH4s[0],
+] as const;
 
 // Testing Utility Functions
 function store(word: Iterable<string> | undefined) {
@@ -92,6 +99,11 @@ describe('Generated Word Tests', () => {
   test(`₅H₂ is '${H2s[5]}'`, () => {
     expect(store(fiveH(2))).toEqual(H2s[5]);
   });
+  for (const i of iota(4)) {
+    test(`₆H(${i.toString(10)}) is '${curve6[i] as string}'`, () => {
+      expect(store(thirdOrder[0](i))).toEqual(curve6[i]);
+    });
+  }
   test('HH(0) is zeroH', () => {
     expect(allCurves[0]).toBe(zeroH);
   });
