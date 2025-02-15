@@ -1,6 +1,10 @@
 import { describe, test, expect } from 'vitest';
 import { HH, type HHCurve } from './hilbertSet';
-import { genSVGPath } from './drawHilbertSet';
+import {
+  genEntryAndExit,
+  genSVGPath,
+  type BoundaryVectors,
+} from './drawHilbertSet';
 import { iota, translate, type Point } from './mathUtils';
 
 function extractEntry(path: string) {
@@ -127,58 +131,87 @@ const forthOrderExit = [
   '15 4',
   '8 3',
 ] as const;
+const boundaryVectorsOrder3: Partial<BoundaryVectors>[] = [
+  { entry: [0, 0], exit: [1, 0] } as const,
+  { entry: [0.5, 0], exit: [0.5, 0] } as const,
+  { entry: [0.5, 0.5], exit: [0.5, 0.5] } as const,
+  { entry: [0, 0.5], exit: [1, 0.5] } as const,
+  { entry: [0, 0], exit: [0.5, 0.5] } as const,
+  { entry: [0, 0.5], exit: [0.5, 0] } as const,
+  { entry: [0.5, 0.25] /*exit: [0.5, 0.25]*/ } as const,
+  { entry: [0.5, 0.25], exit: [1, 0.25] } as const,
+  { /*entry: [0, 0.25],*/ exit: [1, 0.25] } as const,
+  { /*entry: [0.5, 0.25],*/ exit: [0.5, 0.25] } as const,
+  { entry: [0, 0.25] /*exit: [1, 0.25]*/ } as const,
+  { entry: [0, 0.25], exit: [0.5, 0.25] } as const,
+] as const;
 
 describe('SVG Curve Entry and Exit', () => {
-  for (const i of iota(12)) {
-    if (thirdOrderEntry[i])
-      test(`Third Order Curve ${i.toString(10)} has correct Entry`, () => {
-        const path = genSVGPath(i as HHCurve, 3, curve[i]);
-        expect(extractEntry(path)).toEqual(thirdOrderEntry[i]);
+  for (const cNum of iota(12)) {
+    if (thirdOrderEntry[cNum])
+      test(`Third Order Curve ${cNum.toString(10)} has correct Entry`, () => {
+        const path = genSVGPath(cNum as HHCurve, 3, curve[cNum]);
+        expect(extractEntry(path)).toEqual(thirdOrderEntry[cNum]);
       });
 
-    test(`Third Order Curve ${i.toString(10)} has correct Exit relative to Entry`, () => {
-      const path = genSVGPath(i as HHCurve, 3, curve[i]);
-      expect(extractRelativeExit(path).join(' ')).toEqual(thirdOrderRelExit[i]);
+    test(`Third Order Curve ${cNum.toString(10)} has correct Exit relative to Entry`, () => {
+      const path = genSVGPath(cNum as HHCurve, 3, curve[cNum]);
+      expect(extractRelativeExit(path).join(' ')).toEqual(
+        thirdOrderRelExit[cNum],
+      );
     });
 
-    if (thirdOrderExit[i])
-      test(`Third Order Curve ${i.toString(10)} has correct Exit`, () => {
-        const path = genSVGPath(i as HHCurve, 3, curve[i]);
+    if (thirdOrderExit[cNum])
+      test(`Third Order Curve ${cNum.toString(10)} has correct Exit`, () => {
+        const path = genSVGPath(cNum as HHCurve, 3, curve[cNum]);
         const entry = extractEntry(path)
           .split(' ')
           .map((x) => parseInt(x, 10)) as Point;
-        if (thirdOrderEntry[i])
+        if (thirdOrderEntry[cNum])
           expect(
             translate(entry, extractRelativeExit(path), 1, entry).join(' '),
-          ).toEqual(thirdOrderExit[i]);
+          ).toEqual(thirdOrderExit[cNum]);
       });
 
-    if (forthOrderExit[i])
-      test(`Forth Order Curve ${i.toString(10)} has correct Exit`, () => {
-        const path = genSVGPath(i as HHCurve, 4, curve[i]);
+    if (forthOrderExit[cNum])
+      test(`Forth Order Curve ${cNum.toString(10)} has correct Exit`, () => {
+        const path = genSVGPath(cNum as HHCurve, 4, curve[cNum]);
         const entry = extractEntry(path)
           .split(' ')
           .map((x) => parseInt(x, 10)) as Point;
-        if (forthOrderEntry[i])
+        if (forthOrderEntry[cNum])
           expect(
             translate(entry, extractRelativeExit(path), 1, entry).join(' '),
-          ).toEqual(forthOrderExit[i]);
+          ).toEqual(forthOrderExit[cNum]);
       });
 
-    test(`First Order Curve ${i.toString(10)} has Entry 0, 0`, () => {
-      const path = genSVGPath(i as HHCurve, 1, curve[i]);
+    test(`First Order Curve ${cNum.toString(10)} has Entry 0, 0`, () => {
+      const path = genSVGPath(cNum as HHCurve, 1, curve[cNum]);
       expect(extractEntry(path)).toEqual('0 0');
     });
 
-    test(`Second Order Curve ${i.toString(10)} has correct Entry`, () => {
-      const path = genSVGPath(i as HHCurve, 2, curve[i]);
-      expect(extractEntry(path)).toEqual(secondOrderEntry[i]);
+    test(`Second Order Curve ${cNum.toString(10)} has correct Entry`, () => {
+      const path = genSVGPath(cNum as HHCurve, 2, curve[cNum]);
+      expect(extractEntry(path)).toEqual(secondOrderEntry[cNum]);
     });
 
-    if (forthOrderEntry[i])
-      test(`Forth Order Curve ${i.toString(10)} has correct Entry`, () => {
-        const path = genSVGPath(i as HHCurve, 4, curve[i]);
-        expect(extractEntry(path)).toEqual(forthOrderEntry[i]);
+    if (forthOrderEntry[cNum])
+      test(`Forth Order Curve ${cNum.toString(10)} has correct Entry`, () => {
+        const path = genSVGPath(cNum as HHCurve, 4, curve[cNum]);
+        expect(extractEntry(path)).toEqual(forthOrderEntry[cNum]);
+      });
+
+    if (boundaryVectorsOrder3[cNum]?.entry)
+      test(`Curve ${cNum.toString(10)} has correct Entry Vectors`, () => {
+        expect(genEntryAndExit(cNum as HHCurve, 3).entry).toEqual(
+          boundaryVectorsOrder3[cNum]?.entry,
+        );
+      });
+    if (boundaryVectorsOrder3[cNum]?.exit)
+      test(`Curve ${cNum.toString(10)} has correct Exit Vectors`, () => {
+        expect(genEntryAndExit(cNum as HHCurve, 3).exit).toEqual(
+          boundaryVectorsOrder3[cNum]?.exit,
+        );
       });
   }
 });

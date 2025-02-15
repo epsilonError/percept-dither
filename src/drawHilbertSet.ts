@@ -120,13 +120,14 @@ export function absScale(point: Point, order: number, quad: Quadrant): Point {
   return newPoint;
 }
 
-export function genSVGPath(
+export interface BoundaryVectors {
+  readonly entry: Point;
+  readonly exit: Point;
+}
+export function genEntryAndExit(
   curve: HHCurve,
   order: number,
-  gen?: (order: number) => GenAlphabet,
-) {
-  // TODO: Find Boundary Vectors
-  const hCurve = gen ?? HH(curve);
+): BoundaryVectors {
   const entryPointQ0: Point = [0, 0],
     exitPointQ0: Point = [0, 0],
     entryPointQ3: Point = [0, 0],
@@ -152,29 +153,35 @@ export function genSVGPath(
       affine(exitPointQ3, p[stepCurve].q3, exitPointQ3);
     }
   }
+  return { entry: entryPointQ0, exit: exitPointQ3 } as const;
+}
+
+export function genSVGPath(
+  curve: HHCurve,
+  order: number,
+  gen?: (order: number) => GenAlphabet,
+) {
+  // TODO: Find Boundary Vectors
+  const hCurve = gen ?? HH(curve);
+  const { entry: entryPoint, exit: exitPoint } = genEntryAndExit(curve, order);
+
   if ((curve === 6 || curve === 8 || curve === 9) && order > 2) {
     console.log(`==== ${curve.toString(10)} H ${order.toString(10)} ====`);
     console.log(
       'Q0 Entry:',
-      entryPointQ0,
-      'Q0 Exit:',
-      exitPointQ0,
+      entryPoint,
       'Guess:',
-      absScale(entryPointQ0, order, 'q0'),
-      absScale(exitPointQ0, order, 'q0'),
+      absScale(entryPoint, order, 'q0'),
     );
     console.log(
-      'Q3 Entry:',
-      entryPointQ3,
       'Q3 Exit:',
-      exitPointQ3,
+      exitPoint,
       'Guess:',
-      absScale(entryPointQ3, order, 'q3'),
-      absScale(exitPointQ3, order, 'q3'),
+      absScale(exitPoint, order, 'q3'),
     );
   }
   return (
-    `M ${absScale(entryPointQ0, order, 'q0')[0].toString(10)} ${absScale(entryPointQ0, order, 'q0')[1].toString(10)} ` +
+    `M ${absScale(entryPoint, order, 'q0')[0].toString(10)} ${absScale(entryPoint, order, 'q0')[1].toString(10)} ` +
     Array.from(hCurve(order), alphabet2SVG).join(' ')
   );
 }
