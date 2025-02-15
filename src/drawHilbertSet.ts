@@ -128,32 +128,34 @@ export function genEntryAndExit(
   curve: HHCurve,
   order: number,
 ): BoundaryVectors {
-  const entryPointQ0: Point = [0, 0],
-    exitPointQ0: Point = [0, 0],
-    entryPointQ3: Point = [0, 0],
-    exitPointQ3: Point = [0, 0];
+  const entryVecQ0: Point = [0, 0],
+    exitVecQ0: Point = [0, 0],
+    entryVecQ3: Point = [0, 0],
+    exitVecQ3: Point = [0, 0];
 
   const stepsIter = transformSteps(curve, order);
   if (stepsIter.next().done === false) {
     // First step sets exit points
-    replace(exitPointQ0, [1, 0]);
-    replace(exitPointQ3, [1, 0]);
+    replace(exitVecQ0, [1, 0]);
+    replace(exitVecQ3, [1, 0]);
     // Perform subsequent transformations
     for (const stepCurve of stepsIter) {
       if (stepCurve > 5) {
         // Perform Reversions, if needed
         if (p[stepCurve].q0['2'] === 'R') {
-          replace(entryPointQ0, exitPointQ0);
+          replace(entryVecQ0, exitVecQ0);
         }
         if (p[stepCurve].q3['2'] === 'R') {
-          replace(entryPointQ3, exitPointQ3);
+          replace(entryVecQ3, exitVecQ3);
         }
       }
-      affine(entryPointQ0, p[stepCurve].q0, entryPointQ0);
-      affine(exitPointQ3, p[stepCurve].q3, exitPointQ3);
+      affine(entryVecQ0, p[stepCurve].q0, entryVecQ0);
+      affine(exitVecQ0, p[stepCurve].q0, exitVecQ0);
+      affine(entryVecQ3, p[stepCurve].q3, entryVecQ3);
+      affine(exitVecQ3, p[stepCurve].q3, exitVecQ3);
     }
   }
-  return { entry: entryPointQ0, exit: exitPointQ3 } as const;
+  return { entry: entryVecQ0, exit: exitVecQ3 } as const;
 }
 
 export function genSVGPath(

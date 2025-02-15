@@ -138,11 +138,11 @@ const boundaryVectorsOrder3: Partial<BoundaryVectors>[] = [
   { entry: [0, 0.5], exit: [1, 0.5] } as const,
   { entry: [0, 0], exit: [0.5, 0.5] } as const,
   { entry: [0, 0.5], exit: [0.5, 0] } as const,
-  { entry: [0.5, 0.25] /*exit: [0.5, 0.25]*/ } as const,
+  { entry: [0.5, 0.25] /*, exit: [0.5, 0.25]*/ } as const,
   { entry: [0.5, 0.25], exit: [1, 0.25] } as const,
   { /*entry: [0, 0.25],*/ exit: [1, 0.25] } as const,
   { /*entry: [0.5, 0.25],*/ exit: [0.5, 0.25] } as const,
-  { entry: [0, 0.25] /*exit: [1, 0.25]*/ } as const,
+  { entry: [0, 0.25] /*, exit: [1, 0.25]*/ } as const,
   { entry: [0, 0.25], exit: [0.5, 0.25] } as const,
 ] as const;
 
