@@ -96,11 +96,11 @@ const thirdOrderExit = [
   '7 3',
   '4 3',
   '4 0',
-  '4 2', // 6H Arithmetic Boundary Exit is incorrect, but passes tests, Y spacing is off by 1
+  '4 2', // 6H Arithmetic Boundary Exit is incorrect, but passes relative tests
   '7 1',
   '', //'7 1' // 8H X spacing is off by 1, Y spacing is off by 1
   '', //'4 1' // 9H Arithmetic Boundary Exit is incorrect, Y spacing is off by 1
-  '7 2',
+  '7 2', // 10H Arithmetic Boundary Exit is incorrect, but passes relative tests
   '4 1',
 ] as const;
 const forthOrderEntry = [
@@ -124,11 +124,11 @@ const forthOrderExit = [
   '15 7',
   '8 7',
   '8 0',
-  '8 4', // 6H Arithmetic Boundary Exit is incorrect, but passes tests it shouldn't..., Y spacing off by -3
+  '8 4', // 6H Arithmetic Boundary Exit is incorrect, but passes relative tests
   '15 3',
   '', //'15 3' // 8H X Spacing is off by 1, Y spacing is off by 1
   '', //'8 3', // 9H Arithmetic Boundary Exit is incorrect, Y spacing off by 1
-  '15 4',
+  '15 4', // 10H Arithmetic Boundary Exit is incorrect, but passes relative tests
   '8 3',
 ] as const;
 const boundaryVectorsOrder3: Partial<BoundaryVectors>[] = [
@@ -171,6 +171,7 @@ describe('SVG Curve Entry and Exit', () => {
           expect(
             translate(entry, extractRelativeExit(path), 1, entry).join(' '),
           ).toEqual(thirdOrderExit[cNum]);
+        // TODO: Add Exit Point test using absScale
       });
 
     if (forthOrderExit[cNum])
@@ -183,6 +184,7 @@ describe('SVG Curve Entry and Exit', () => {
           expect(
             translate(entry, extractRelativeExit(path), 1, entry).join(' '),
           ).toEqual(forthOrderExit[cNum]);
+        // TODO: Add Exit Point test using absScale
       });
 
     test(`First Order Curve ${cNum.toString(10)} has Entry 0, 0`, () => {

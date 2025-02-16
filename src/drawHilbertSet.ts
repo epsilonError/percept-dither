@@ -164,6 +164,11 @@ export function genSVGPath(
   gen?: (order: number) => GenAlphabet,
 ) {
   // TODO: Find Boundary Vectors
+  //       - The Entry and Exit vectors for Quadrants with Reversions aren't working out
+  //         which in turn makes the discretized position calculations incorrect.
+  //       - And changing those vectors to the correct position will need more figuring.
+  //         Off by one errors abound in the absScale implmentation. Though I could hard
+  //         code the differences as a last resort.
   const hCurve = gen ?? HH(curve);
   const { entry: entryPoint, exit: exitPoint } = genEntryAndExit(curve, order);
 
