@@ -41,8 +41,8 @@ export function translate(
   return inPlace;
 }
 
-/** Generator of numbers 0 ... n-1 */
-export function* iota(n: number) {
+/** Generator of numbers 0 … n-1 */
+export function* iota(n: number): Generator<number> {
   for (let i = 0; i < n; i++) {
     yield i;
   }
