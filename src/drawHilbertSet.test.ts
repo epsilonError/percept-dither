@@ -98,8 +98,8 @@ const thirdOrderExit = [
   '4 0',
   '4 2', // 6H Arithmetic Boundary Exit is incorrect, but passes relative tests
   '7 1',
-  '', //'7 1' // 8H X spacing is off by 1, Y spacing is off by 1
-  '', //'4 1' // 9H Arithmetic Boundary Exit is incorrect, Y spacing is off by 1
+  '', //'7 1', // 8H X spacing is off by 1, Y spacing is off by 1
+  '', //'4 1', // 9H Arithmetic Boundary Exit is incorrect, Y spacing is off by 1
   '7 2', // 10H Arithmetic Boundary Exit is incorrect, but passes relative tests
   '4 1',
 ] as const;

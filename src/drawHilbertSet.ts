@@ -169,6 +169,7 @@ export function genSVGPath(
   //       - And changing those vectors to the correct position will need more figuring.
   //         Off by one errors abound in the absScale implmentation. Though I could hard
   //         code the differences as a last resort.
+  //       - All errors coincide with r → rʹ transformation from Table 6 in the paper
   const hCurve = gen ?? HH(curve);
   const { entry: entryPoint, exit: exitPoint } = genEntryAndExit(curve, order);
 
