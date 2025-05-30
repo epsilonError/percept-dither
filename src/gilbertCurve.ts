@@ -24,6 +24,7 @@
 
 import { mMultiply, translate as move, iota, type Point } from './mathUtils';
 
+/** Generates valid positions in the given 2D space that follows a Gilbert Curve */
 export function* gilbertPositions(width: number, height: number) {
   if (
     width < 1 ||
@@ -36,10 +37,12 @@ export function* gilbertPositions(width: number, height: number) {
   const major: Point = [1, 0],
     ortho: Point = [0, 1];
 
+  /** Reflect the Major and Orthogonal bases across y = x */
   const reflect = () => {
     mMultiply([0, 1, 1, 0], major, major);
     mMultiply([0, 1, 1, 0], ortho, ortho);
   };
+  /** Reflect the Major and Orthogonal bases across y = -x */
   const negReflect = () => {
     mMultiply([0, -1, -1, 0], major, major);
     mMultiply([0, -1, -1, 0], ortho, ortho);
@@ -53,12 +56,14 @@ export function* gilbertPositions(width: number, height: number) {
     let hWidth = Math.trunc(width / 2);
     let hHeight = Math.trunc(height / 2);
     if (height === 1) {
+      // yield each entry in the row
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for (const _ of iota(width)) {
         yield [...entry];
         move(entry, major, 1, entry);
       }
     } else if (width === 1) {
+      // yield each entry in the column
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for (const _ of iota(height)) {
         yield [...entry];
@@ -66,22 +71,25 @@ export function* gilbertPositions(width: number, height: number) {
       }
     } else if (2 * width > 3 * height) {
       if (hWidth % 2 && width > 2) {
-        hWidth += 1;
+        hWidth += 1; // make first half width even
       }
 
       yield* gilbert([...entry], hWidth, height);
       yield* gilbert(move(entry, major, hWidth), width - hWidth, height);
     } else if (2 * width <= 3 * height) {
       if (hHeight % 2 && height > 2) {
-        hHeight += 1;
+        hHeight += 1; // make first half height even
       }
       const rightEntry = move(entry, ortho, hHeight);
       const downEntry = move(move(entry, ortho, hHeight - 1), major, width - 1);
 
+      // STEP UP
       reflect();
-      yield* gilbert(structuredClone(entry), hHeight, hWidth);
+      yield* gilbert([...entry], hHeight, hWidth);
       reflect();
+      // LONG STEP RIGHT
       yield* gilbert(rightEntry, width, Math.abs(height - hHeight));
+      // STEP DOWN
       negReflect();
       yield* gilbert(downEntry, hHeight, Math.abs(width - hWidth));
       negReflect();
@@ -89,6 +97,7 @@ export function* gilbertPositions(width: number, height: number) {
   }
 
   if (width < height) {
+    // Set the Major axis along the longer side
     reflect();
     [width, height] = [height, width];
   }
