@@ -103,7 +103,7 @@ interface Options {
 }
 /** Initializes Reference Palettes and Animation options*/
 async function main(
-  blackAndWhite = true,
+  blackAndWhite = false,
   grayscale = true,
   colors = false,
   steps = 30,
@@ -145,7 +145,7 @@ let zero: number;
 
 main()
   .then((result) => {
-    if (!result.blackAndWhite && !result.color) {
+    if (!(result.blackAndWhite || result.grayscale) && !result.color) {
       console.log('No palettes, no positions');
       return;
     }
