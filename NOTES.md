@@ -32,7 +32,7 @@ Riemersma Dither:
 
 # Implementation Ideas
 
-## 2 tracks
+## 2 tracks for color data manipulation
 
 1. Minimal Data Structures
 2. In-place Image Edit
@@ -58,3 +58,42 @@ There is another interesting aspect in the errors from Float64 Perceptual Space 
 ### Current Plan
 
 Since the non-riemersma dither requires application and error buffer I'll probably stick with the Canvas ImageData and ImageBitmap framework I've started as a proof of concept. But still use all the minimal data structures (using the Uint8Clamped Array will bypass reading from the image data and calling Color.js extraneously). If more browsers support Atomics on TypedArrays that could be useful as a HTML Canvas implementation (for now I'm not going to bother with making sure I can host a secure SharedArray capable demo of this).
+
+## Animated Drawing
+
+The animated drawing substrate only needs to know the position, palette reference, and palette reference index to correctly draw the right color on the image. This would show the change for each pixel as the curve is travelled along.
+
+Aside: An interesting future visualization could possibly show the error diffusion across kernels as well. And the linear error queue for Riemersma could be shown on the side. It could also be nice to see the dropped error amounts as an overlay. But I don't know how to visualize the overlay: alpha? color? svg mask? Visualizing the error diffusion is also capped at the color gamut so it can only hint at, not literally show, the diffused result.
+
+The next question is if the animation steps should be synchronized or asynchronous. It could be cool to watch multiple dithers in lock step. That will probably be what I focus on implementing first. Then 1 coordinating traversal generator can spit out to all the aligned color selectors. Though telling the Image Data manipulators multiple number of steps is probably best for throughput. I'm not sure though.
+
+## Selection Criteria
+
+Selecting the new color to draw relies on specific criteron. Currently the demo uses how far along the curve is travelled.
+
+- For Color, splits the 16 colors evenly across the total number of pixels to traverse.
+- For Grayscale, splits the 256 achromatics evenly across the total number of pixels to traverse.
+- For Black & White, alternates between black and white as it traverses the curve.
+- Future Selections will use the same ordered references, but will choose based on diffusion algorithm.
+
+So selection can be based on position along curve, current color, future colors, previous colors, and the build-up of diffused errors.
+
+Aside: I guess future colors isn't generally used, diffusion pushes out into the future not the other way around. But what/how could diffusion based on future colors mean/work?
+
+## Traversal Pattern
+
+Possible Traversal Patterns:
+
+- Line Order
+- Serpentine (line order but turns upon reaching edges)
+- 2D Curve
+- Random
+- Other
+
+## Diffusion Troubles
+
+A mix of cases at the intersection of Traversal Patterns and Selection Criteria
+
+- Wrap on edges?
+- Drop on edges?
+- How to Orient during traversal?
