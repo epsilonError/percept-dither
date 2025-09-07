@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import { HH, type HHCurve } from './hilbertSet';
 import {
+  absScale,
   genEntryAndExit,
   genSVGPath,
   type BoundaryVectors,
@@ -249,5 +250,31 @@ describe('SVG Curve Entry and Exit', () => {
           boundaryVectorsOrder3[5],
         );
       });
+
+    for (const order of iota(6)) {
+      if (order > 0)
+        describe(`Absolute placement of Entry and Exit`, () => {
+          describe(`${order.toString(10)} order of Curve ${cNum.toString(10)}`, () => {
+            const path = genSVGPath(cNum as HHCurve, order, curve[cNum]);
+            const entryPoint = extractEntry(path)
+              .split(' ')
+              .map((x) => parseInt(x, 10)) as Point;
+            const relativeExit = extractRelativeExit(path);
+            const exitPoint = translate(entryPoint, relativeExit);
+            const { entry, exit } = genEntryAndExit(cNum as HHCurve, order);
+
+            test(`SVG Entry matches Absolute Scaled Entry`, () => {
+              expect(entryPoint).toEqual(
+                absScale(entry, order, 'q0', cNum as HHCurve),
+              );
+            });
+            test(`SVG Exit matches Absolute Scaled Exit`, () => {
+              expect(exitPoint).toEqual(
+                absScale(exit, order, 'q3', cNum as HHCurve),
+              );
+            });
+          });
+        });
+    }
   }
 });

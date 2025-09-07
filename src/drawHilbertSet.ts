@@ -150,6 +150,7 @@ export function absScale(
     // 0 ≤ y ≤ quadLength - 1
     if (x_pos > quadLength) newPoint[0] += -1;
     if (y_pos !== 0) newPoint[1] += -1;
+    if (order > 2 && [6, 10].includes(curve)) newPoint[1] += 1;
   }
   return newPoint;
 }
@@ -239,6 +240,6 @@ function alphabet2SVG(a: Alphabet): string {
   return svgMorph[a];
 }
 
-for (const i of iota(12)) {
-  console.log(genSVGPath(i as HHCurve, 3));
-}
+// for (const i of iota(12)) {
+//   console.log(genSVGPath(i as HHCurve, 3));
+// }
