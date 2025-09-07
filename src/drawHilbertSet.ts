@@ -18,6 +18,9 @@ import {
 // ----- SVG Draw Hilbert Sets -----
 // Based on Arithmetic Representation of Homogenous Hilbert Curves
 // from HILBERT CURVES IN TWO DIMENSIONS by Estevez-Rams et al.
+//
+// Currently only useful for drawing SVG paths and extracting the
+// boundary vectors.
 
 type MatrixTransform = 'I' | 'R' | 'V' | 'H';
 type VecTransform = 0 | 1 | 2 | 3 | 4 | 5;
@@ -48,7 +51,17 @@ function neg(m: Matrix) {
 }
 
 //prettier-ignore
-/** Affine Transformations for Curve & Quadrant */
+/** Affine Transformations for Curve & Quadrant
+ *
+ * Includes corrections to paper based on this implementation's tests.
+ * - Quad 3 of ₆H is [Uᵥ,t₃]
+ * - Quad 1 of ₈H is [Uₕ,t₁]
+ * - Quad 1 of ₉H is [Uᵢ,t₃]
+ * - Quad 3 of ₁₀H is [-Uᵣ,t₄]
+ *
+ * These corrections are enough for my uses. Equivalent and more exact
+ * Affine Transformations may be needed in future.
+ */
 const p: Record<HHCurve, AffineTransforms> = {
   0:  { q0: [    U.R,  t['0']],      q3: [neg(U.R), t['4']]      } as const,
   1:  { q0: [    U.V,  t['2']],      q3: [neg(U.V), t['3']]      } as const,
@@ -56,11 +69,11 @@ const p: Record<HHCurve, AffineTransforms> = {
   3:  { q0: [    U.H,  t['1']],      q3: [    U.H,  t['3']]      } as const,
   4:  { q0: [    U.R,  t['0']],      q3: [neg(U.I), t['4']]      } as const,
   5:  { q0: [    U.H,  t['1']],      q3: [neg(U.V), t['3']]      } as const,
-  6:  { q0: [neg(U.I), t['3']],      q3: [    U.H,  t['3'], 'R'] } as const,
+  6:  { q0: [neg(U.I), t['3']],      q3: [neg(U.V), t['3']]      } as const,
   7:  { q0: [neg(U.I), t['3']],      q3: [neg(U.R), t['4']]      } as const,
-  8:  { q0: [neg(U.V), t['1'], 'R'], q3: [neg(U.R), t['4']]      } as const,
-  9:  { q0: [neg(U.R), t['3'], 'R'], q3: [neg(U.V), t['3']]      } as const,
-  10: { q0: [    U.H,  t['1']],      q3: [neg(U.I), t['4'], 'R'] } as const,
+  8:  { q0: [    U.H,  t['1']],      q3: [neg(U.R), t['4']]      } as const,
+  9:  { q0: [neg(U.I), t['3']],      q3: [neg(U.V), t['3']]      } as const,
+  10: { q0: [    U.H,  t['1']],      q3: [neg(U.R), t['4']]      } as const,
   11: { q0: [    U.H,  t['1']],      q3: [neg(U.V), t['3']]      } as const,
 };
 
@@ -95,27 +108,48 @@ function* transformSteps(
   }
 }
 
-export function absScale(point: Point, order: number, quad: Quadrant): Point {
-  const length = 2 ** order;
-  const quadLength = order < 1 ? 0 : length / 2;
-
-  const newPoint = sVec(quadLength > 2 ? 2 : quadLength, point);
-  if (order > 2) {
-    sVec(quadLength, newPoint, newPoint);
+export function absScale(
+  point: Point,
+  order: number,
+  quad: Quadrant,
+  curve: HHCurve,
+): Point {
+  if (point.every((x) => x === 0)) {
+    return point;
   }
 
+  const length = order < 1 ? 0 : 2 ** order;
+  const quadLength = length / 2;
+
+  const newPoint = sVec(length, point);
+  const [x_pos, y_pos] = newPoint;
+
   if (quad === 'q0') {
+    if (point[0] > 0.5) {
+      throw new Error(point.toString());
+    }
+    if (point[1] > 0.5) {
+      throw new Error(point.toString());
+    }
     // Keep q0 in q0:
     // 0 ≤ x ≤ quadLength - 1
     // 0 ≤ y ≤ quadLength - 1
-    if (newPoint[0] !== 0 && newPoint[0] % quadLength === 0) newPoint[0] += -1;
-    if (newPoint[1] !== 0 && newPoint[1] % quadLength === 0) newPoint[1] += -1;
+    if (x_pos !== 0) newPoint[0] += -1;
+    if (y_pos !== 0) newPoint[1] += -1;
+    if (order > 2 && [6, 7, 10, 11].includes(curve)) newPoint[1] += 1;
   }
   if (quad === 'q3') {
+    if (point[0] < 0.5) {
+      throw new Error(point.toString());
+    }
+    if (point[1] > 0.5) {
+      throw new Error(point.toString());
+    }
     // keep q3 in q3:
-    // quadLength ≤ x ≤ 2 * quadLength - 1
+    // quadLength ≤ x ≤ length - 1
     // 0 ≤ y ≤ quadLength - 1
-    if (newPoint[1] !== 0 && newPoint[1] % quadLength === 0) newPoint[1] += -1;
+    if (x_pos > quadLength) newPoint[0] += -1;
+    if (y_pos !== 0) newPoint[1] += -1;
   }
   return newPoint;
 }
@@ -140,6 +174,10 @@ export function genEntryAndExit(
     replace(exitVecQ3, [1, 0]);
     // Perform subsequent transformations
     for (const stepCurve of stepsIter) {
+      affine(entryVecQ0, p[stepCurve].q0, entryVecQ0);
+      affine(exitVecQ0, p[stepCurve].q0, exitVecQ0);
+      affine(entryVecQ3, p[stepCurve].q3, entryVecQ3);
+      affine(exitVecQ3, p[stepCurve].q3, exitVecQ3);
       if (stepCurve > 5) {
         // Perform Reversions, if needed
         if (p[stepCurve].q0['2'] === 'R') {
@@ -149,10 +187,6 @@ export function genEntryAndExit(
           replace(entryVecQ3, exitVecQ3);
         }
       }
-      affine(entryVecQ0, p[stepCurve].q0, entryVecQ0);
-      affine(exitVecQ0, p[stepCurve].q0, exitVecQ0);
-      affine(entryVecQ3, p[stepCurve].q3, entryVecQ3);
-      affine(exitVecQ3, p[stepCurve].q3, exitVecQ3);
     }
   }
   return { entry: entryVecQ0, exit: exitVecQ3 } as const;
@@ -168,28 +202,30 @@ export function genSVGPath(
   //         which in turn makes the discretized position calculations incorrect.
   //       - And changing those vectors to the correct position will need more figuring.
   //         Off by one errors abound in the absScale implmentation. Though I could hard
-  //         code the differences as a last resort.
+  //         code the differences as a last resort. (Did a bit of hard coding)
   //       - All errors coincide with r → rʹ transformation from Table 6 in the paper
   const hCurve = gen ?? HH(curve);
-  const { entry: entryPoint, exit: exitPoint } = genEntryAndExit(curve, order);
+  const { entry: entryPoint /*exit: exitPoint*/ } = genEntryAndExit(
+    curve,
+    order,
+  );
 
-  if ((curve === 6 || curve === 8 || curve === 9) && order > 2) {
-    console.log(`==== ${curve.toString(10)} H ${order.toString(10)} ====`);
-    console.log(
-      'Q0 Entry:',
-      entryPoint,
-      'Guess:',
-      absScale(entryPoint, order, 'q0'),
-    );
-    console.log(
-      'Q3 Exit:',
-      exitPoint,
-      'Guess:',
-      absScale(exitPoint, order, 'q3'),
-    );
-  }
+  // console.log(`==== ${curve.toString(10)} H ${order.toString(10)} ====`);
+  // console.log(
+  //   'Q0 Entry:',
+  //   entryPoint,
+  //   'Guess:',
+  //   absScale(entryPoint, order, 'q0', curve),
+  // );
+  // console.log(
+  //   'Q3 Exit:',
+  //   exitPoint,
+  //   'Guess:',
+  //   absScale(exitPoint, order, 'q3', curve),
+  // );
+
   return (
-    `M ${absScale(entryPoint, order, 'q0')[0].toString(10)} ${absScale(entryPoint, order, 'q0')[1].toString(10)} ` +
+    `M ${absScale(entryPoint, order, 'q0', curve)[0].toString(10)} ${absScale(entryPoint, order, 'q0', curve)[1].toString(10)} ` +
     Array.from(hCurve(order), alphabet2SVG).join(' ')
   );
 }
@@ -204,5 +240,5 @@ function alphabet2SVG(a: Alphabet): string {
 }
 
 for (const i of iota(12)) {
-  if (i === 8 || i === 9) console.log(genSVGPath(i as HHCurve, 4));
+  console.log(genSVGPath(i as HHCurve, 3));
 }
