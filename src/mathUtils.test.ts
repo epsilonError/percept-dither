@@ -46,6 +46,8 @@ describe('Math Utilities', () => {
     });
   });
   test('Iota (Index/Range Generator)', () => {
+    expect(Array.from(iota(0))).toEqual([]);
+    expect(Array.from(iota(1))).toEqual([0]);
     expect(Array.from(iota(4))).toEqual([0, 1, 2, 3]);
     expect(Array.from(iota(8))).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
   });
