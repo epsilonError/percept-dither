@@ -31,20 +31,20 @@
   },
   "homepage": "https://github.com/epsilonError/percept-dither#readme",
   "devDependencies": {
-    "@eslint/js": "^9.38.0",
-    "@tsconfig/strictest": "^2.0.6",
+    "@eslint/js": "^9.38.1",
+    "@tsconfig/strictest": "^2.0.7",
     "@types/eslint-config-prettier": "^6.11.3",
-    "@types/node": "^22.18.12",
-    "eslint": "^9.38.0",
+    "@types/node": "^22.19.0",
+    "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
     "prettier": "3.6.2",
     "typescript": "~5.8.3",
-    "typescript-eslint": "^8.46.2",
-    "vite": "^7.1.12",
+    "typescript-eslint": "^8.46.3",
+    "vite": "^7.2.2",
     "vitest": "4.0.3"
   },
   "dependencies": {
-    "colorjs.io": "^0.6.0-beta.1"
+    "colorjs.io": "^0.6.0-beta.3"
   }
 }
