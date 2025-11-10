@@ -21,3 +21,9 @@ In progress grayscale, and palette dither, using [Color.js](https://colorjs.io/)
 - [DitherIt!](https://ditherit.com/)
 - Surma's [Ditherpunk](https://surma.dev/things/ditherpunk/) article
 - Björn Ottosson's [blog](https://bottosson.github.io/) [posts](https://bottosson.github.io/posts/oklab/) [about](https://bottosson.github.io/posts/gamutclipping/) [Oklab](https://bottosson.github.io/posts/colorpicker/)
+
+## Additional Code
+
+This repository also contains exploratory code for other possible dither/halftone/stipple approaches.
+
+These will be moved into a separate repositories if they reach a useful state. See the Additional Code section of the NOTES for an overview and ideas/hopes for that code.

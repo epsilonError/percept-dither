@@ -97,3 +97,35 @@ A mix of cases at the intersection of Traversal Patterns and Selection Criteria
 - Wrap on edges?
 - Drop on edges?
 - How to Orient during traversal?
+
+# Additional Code
+
+## gilbertCurve.ts
+
+Implementation of the Generalized Hilbert Curve using generators.
+
+Makes a space-filling curve that generally follows a hilbert curve, but handles non-square spaces without distant jumps or major discontinuities.
+
+## hilbertSet.ts
+
+Implementation of the 12 homogeneous Hilbert Curves using generators.
+
+The hope is to use these, and the inhomogeneous Hilbert curves, to compose a space-filling curve that tiles a rectangular plane. And it would be especially useful if a closed-loop space-filling curve could be made out of them, then a Riemersma Dither could be run iteratively.
+
+### drawHilbertSet.ts
+
+Tools to visualize the Hilbert Sets. And an attempt to use the Arithmetic Representation to play around with the tiling idea and in future try pathfinding or route planning to automate creating closed-loops or combining curves.
+
+## Voronoi Stippling
+
+An attempt to make vector-based stipplings in contrast to the raster/grid-based dithering that is already planned.
+
+Many examples of Weighted Voronoi Stippling already exist, but I would like to attempt a Capacity-Constrained Voronoi Stippling as well.
+
+### Weighted vs. Capacity-Constrained
+
+Weighted uses a set of Sample Points from an image to make a Voronoi Diagram, and those points are adjusted towards the centroid of the Voronoi Region. The degree/weight of the movement is based on the underlying grayscale color from the originally sampled image. The centroid calculation and weighted movement towards it are performed for each step.
+
+Capacity-Constrained uses a Set of Samples Points from an image, and a Set of Sites that come with a Capacity constraint. The Sites describe a Voronoi Region that enclose a constrained number of Sample Points. The enclosed Points are swapped between Sites so the Capacity is maintained but the region is changed. After all Sites swap Sample Points, each Site's location is moved to the centroid of its enclosed points. The swaps and Site location changes are performed for each step.
+
+So comparatively: Weighted mutates the sampled points based on centroids and weights from portions of the underlying distribution and those mutated points are site locations and the final stipple dots. Capacity-Constrained has independent sampled points and site locations, but the site locations— which are also the final dots— slide between the preserved points. (I wonder which samples less from the underlying image? Probably also depends on the iterations needed.) Since Capacity-Constrained could swap points between any/all sites it has a higher memory [O(n+m) vs O(n) or O(n+m)] and time [O(n²+nm⋅log(m/n)) vs. O(m⋅log(n))] complexity.
