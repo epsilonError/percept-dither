@@ -58,6 +58,14 @@ self.onmessage = (
       }
     }
 
+    const decay = Math.pow(k + 1, -0.8);
+    /**
+     * Add centered random displacement, and scale the range based on the iteration count.
+     *
+     * Max displacement is 5 from the center, and it exponentially decays each iteration.
+     */
+    const randomDisplacement = () => (Math.random() - 0.5) * decay * 10;
+
     // Move the Sites towards their Centroid, scaled by the Centroid's Weight
     for (let i = 0; i < num; ++i) {
       const w = weights[i]!;
@@ -65,8 +73,8 @@ self.onmessage = (
         y0 = sites[1 + i * 2]!;
       const x1 = w ? centroids[i * 2]! / w : x0,
         y1 = w ? centroids[1 + i * 2]! / w : y0;
-      sites[i * 2] = x0 + (x1 - x0);
-      sites[1 + i * 2] = y0 + (y1 - y0);
+      sites[i * 2] = x0 + (x1 - x0) * 1.8 + randomDisplacement();
+      sites[1 + i * 2] = y0 + (y1 - y0) * 1.8 + randomDisplacement();
     }
 
     postMessage(sites);
