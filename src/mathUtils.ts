@@ -9,7 +9,11 @@ export type Matrix = [number, number, number, number];
  * @param inPlace pass the same Point array as vec to change in-place
  * @returns matrix post-multiplication
  */
-export function mMultiply(matrix: Matrix, vec: Point, inPlace: Point = [0, 0]) {
+export function mMultiply(
+  matrix: Readonly<Matrix>,
+  vec: Readonly<Point>,
+  inPlace: Point = [0, 0],
+) {
   const x = matrix[0] * vec[0] + matrix[1] * vec[1];
   const y = matrix[2] * vec[0] + matrix[3] * vec[1];
 
@@ -27,8 +31,8 @@ export function mMultiply(matrix: Matrix, vec: Point, inPlace: Point = [0, 0]) {
  * @returns vector translation
  */
 export function translate(
-  point: Point,
-  vec: Point,
+  point: Readonly<Point>,
+  vec: Readonly<Point>,
   times = 1,
   inPlace: Point = [0, 0],
 ): Point {
@@ -58,7 +62,11 @@ export function replace(a: Point, b: Point): void {
 }
 
 /** Scalar and Vector Multiply, use inPlace to specify Vector to update */
-export function sVec(scalar: number, vec: Point, inPlace: Point = [0, 0]) {
+export function sVec(
+  scalar: number,
+  vec: Readonly<Point>,
+  inPlace: Point = [0, 0],
+) {
   inPlace[0] = scalar * vec[0];
   inPlace[1] = scalar * vec[1];
   return inPlace;
@@ -67,7 +75,7 @@ export function sVec(scalar: number, vec: Point, inPlace: Point = [0, 0]) {
 /** Scalar and Matrix Multiply, use inPlace to specify Matrix to update */
 export function sMatrix(
   scalar: number,
-  matrix: Matrix,
+  matrix: Readonly<Matrix>,
   inPlace: Matrix = [0, 0, 0, 0],
 ) {
   inPlace[0] = scalar * matrix[0];
@@ -75,4 +83,12 @@ export function sMatrix(
   inPlace[2] = scalar * matrix[2];
   inPlace[3] = scalar * matrix[3];
   return inPlace;
+}
+
+/** Squared Distance between two Points */
+export function distanceSq(
+  [x0, y0]: Readonly<Point>,
+  [x1, y1]: Readonly<Point>,
+) {
+  return (x0 - x1) ** 2 + (y0 - y1) ** 2;
 }
