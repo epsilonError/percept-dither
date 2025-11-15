@@ -33,17 +33,17 @@
   "devDependencies": {
     "@types/d3-delaunay": "^6.0.4",
     "@eslint/js": "^9.38.1",
-    "@tsconfig/strictest": "^2.0.7",
+    "@tsconfig/strictest": "^2.0.8",
     "@types/eslint-config-prettier": "^6.11.3",
-    "@types/node": "^22.19.0",
+    "@types/node": "^22.19.1",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
     "prettier": "3.6.2",
     "typescript": "~5.8.3",
-    "typescript-eslint": "^8.46.3",
+    "typescript-eslint": "^8.46.4",
     "vite": "^7.2.2",
-    "vitest": "4.0.3"
+    "vitest": "4.0.9"
   },
   "dependencies": {
     "colorjs.io": "^0.6.0-beta.3",
