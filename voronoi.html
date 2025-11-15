@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, interactive-widget=overlays-content"
+    />
+    <title>Voronoi Stippling Demo</title>
+    <script type="module" src="src/drawStippling.ts" defer></script>
+  </head>
+  <body>
+    <noscript><p>This demo requires javascript to run.</p></noscript>
+
+    <div>
+      <label for="imagefile">Choose image to upload</label>
+      <input id="imagefile" type="file" accept="image/*" />
+    </div>
+
+    <canvas id="canvasWeighted" width="476" height="600"></canvas>
+    <canvas id="canvasCapacityConstrained" width="476" height="600"></canvas>
+  </body>
+</html>

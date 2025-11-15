@@ -13,9 +13,12 @@ const canvas3Context = (
 ).getContext('bitmaprenderer')!;
 
 const offscreen = new OffscreenCanvas(canvas2Width, canvas2Height);
-const worker = new Worker(new URL('./perceptGrayWorker.ts', import.meta.url), {
-  type: 'module',
-});
+const worker = new Worker(
+  new URL('./perceptGrayImgWorker.ts', import.meta.url),
+  {
+    type: 'module',
+  },
+);
 
 img.addEventListener('load', () => {
   context2.drawImage(img, 0, 0);
