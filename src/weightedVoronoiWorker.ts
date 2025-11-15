@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Delaunay } from 'd3-delaunay';
+import { iota } from './mathUtils';
 
 self.onmessage = (
   event: MessageEvent<{
@@ -38,18 +39,18 @@ self.onmessage = (
     }
   }
 
-  const delaunay = new Delaunay(sites);
+  const delaunay = new Delaunay<number>(sites);
   const voronoi = delaunay.voronoi([0, 0, width, height]);
 
   /** Iteratively move Sites to Weighted Centroids, and update Voronoi Diagram */
-  for (let k = 0; k < 100; ++k) {
+  for (const k of iota(100)) {
     // Reset Centroids and their Weights
     centroids.fill(0);
     weights.fill(0);
 
     // Traverse each pixel to calculate the centroids and weights
     for (let x = 0, i = 0; x < width; ++x) {
-      for (let y = 0; y < height; ++y) {
+      for (const y of iota(height)) {
         const w = densities[x + y * width]!;
         i = delaunay.find(x, y, i);
         weights[i]! += w;
@@ -67,7 +68,7 @@ self.onmessage = (
     const randomDisplacement = () => (Math.random() - 0.5) * decay * 10;
 
     // Move the Sites towards their Centroid, scaled by the Centroid's Weight
-    for (let i = 0; i < num; ++i) {
+    for (const i of iota(num)) {
       const w = weights[i]!;
       const x0 = sites[i * 2]!,
         y0 = sites[1 + i * 2]!;
@@ -80,6 +81,26 @@ self.onmessage = (
     postMessage(sites);
     voronoi.update();
   }
+
+  // Normalized Capacity Error Calculation
+  let totalCapacity = 0;
+  weights.fill(0);
+  for (let y = 0, i = 0; y < height; ++y) {
+    for (const x of iota(width)) {
+      const w = densities[y * width + x]!;
+      i = delaunay.find(x, y, i);
+      weights[i]! += w;
+      totalCapacity += w;
+    }
+  }
+  const cStar = totalCapacity / num;
+  const normCapErr =
+    weights
+      .map((c) => Math.pow(c / cStar - 1, 2))
+      .reduce((acc, cur) => acc + cur, 0) / num;
+  console.log('Capacities:', weights);
+  console.log('C* =', cStar);
+  console.log('Normalized Capacity Error:', normCapErr);
 
   close();
 };
