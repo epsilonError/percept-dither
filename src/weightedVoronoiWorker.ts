@@ -52,10 +52,10 @@ self.onmessage = (
     for (let x = 0, i = 0; x < width; ++x) {
       for (const y of iota(height)) {
         const w = densities[x + y * width]!;
-        i = delaunay.find(x, y, i);
+        i = delaunay.find(x + 0.5, y + 0.5, i);
         weights[i]! += w;
-        centroids[i * 2]! += w * x;
-        centroids[i * 2 + 1]! += w * y;
+        centroids[i * 2]! += w * (x + 0.5);
+        centroids[i * 2 + 1]! += w * (y + 0.5);
       }
     }
 
