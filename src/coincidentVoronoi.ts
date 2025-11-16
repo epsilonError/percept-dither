@@ -62,8 +62,8 @@ export class CoincidentVoronoi {
   #coincident() {
     this.#coincidenceMap.clear();
     this.#coincidentId.clear();
-    this.delaunay.inedges.forEach((x, i) => {
-      if (x === -1) {
+    this.delaunay.inedges.forEach((el, i) => {
+      if (el === -1) {
         const { x, y } = this.#position(i);
         const foundIndex = this.delaunay.find(x + 0.1, y + 0.1);
         this.#add2Map(foundIndex, i);
@@ -107,17 +107,20 @@ export class CoincidentVoronoi {
       const last = neighbors[i - 1]!;
       union(result, last);
       if (result.size >= count + 1 + rejectCount) break;
+      let rejectLocal = 0;
       const next = new Set<number>();
       for (const src of last) {
         for (const n of this.neighbors(src)) {
           if (!result.has(n)) {
             if (options.acceptPred ? !options.acceptPred(n) : false) {
-              ++rejectCount;
+              ++rejectLocal; // TODO: Test that this.neighbors only returns unique values
             }
             next.add(n);
           }
         }
       }
+      rejectCount += rejectLocal;
+      if (options.over === 'rings' && next.size <= rejectLocal) break;
       neighbors.push(next);
       if (next.size === 0) break;
     }
