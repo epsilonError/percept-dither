@@ -1,6 +1,19 @@
 import { Delaunay, Voronoi } from 'd3-delaunay';
 import { union } from './mathUtils';
 
+interface NeighborAndNeighborsOptions {
+  over: 'individuals' | 'rings';
+  acceptPred?: (id: number) => boolean;
+}
+interface NeighborAndNeighborsIndividuals {
+  over: 'individuals';
+  acceptPred?: (id: number) => boolean;
+}
+interface NeighborAndNeighborsRings {
+  over: 'rings';
+  acceptPred?: (id: number) => boolean;
+}
+
 export class CoincidentVoronoi {
   delaunay: Delaunay<number>;
   voronoi: Voronoi<number>;
@@ -69,9 +82,21 @@ export class CoincidentVoronoi {
 
   neighborsAndNeighbors(
     id: number,
+    depth: number,
+    count: number,
+    options: NeighborAndNeighborsIndividuals,
+  ): Set<number>;
+  neighborsAndNeighbors(
+    id: number,
+    depth: number,
+    count: number,
+    options: NeighborAndNeighborsRings,
+  ): Set<number>[];
+  neighborsAndNeighbors(
+    id: number,
     depth = 2,
     count = Infinity,
-    acceptPred?: (id: number) => boolean,
+    options: NeighborAndNeighborsOptions = { over: 'individuals' },
   ) {
     const neighbors = [new Set([id])];
     const result = new Set<number>();
@@ -86,7 +111,7 @@ export class CoincidentVoronoi {
       for (const src of last) {
         for (const n of this.neighbors(src)) {
           if (!result.has(n)) {
-            if (acceptPred ? !acceptPred(n) : false) {
+            if (options.acceptPred ? !options.acceptPred(n) : false) {
               ++rejectCount;
             }
             next.add(n);
@@ -97,14 +122,30 @@ export class CoincidentVoronoi {
       if (next.size === 0) break;
     }
 
-    result.delete(id);
-    if (rejectCount > 0 && acceptPred) {
-      for (const candidate of result) {
-        if (!acceptPred(candidate)) {
-          result.delete(candidate);
+    if (options.over === 'individuals') {
+      result.delete(id);
+      if (rejectCount > 0 && options.acceptPred) {
+        for (const candidate of result) {
+          if (!options.acceptPred(candidate)) {
+            result.delete(candidate);
+          }
         }
       }
+      neighbors.length = 0;
+      return result;
+    } /*(options.over === 'rings')*/ else {
+      neighbors.shift();
+      if (rejectCount > 0 && options.acceptPred) {
+        for (const ring of neighbors) {
+          for (const candidate of ring) {
+            if (!options.acceptPred(candidate)) {
+              ring.delete(candidate);
+            }
+          }
+        }
+      }
+      result.clear();
+      return neighbors;
     }
-    return result;
   }
 }

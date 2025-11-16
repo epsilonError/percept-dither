@@ -1,17 +1,24 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { distanceSq, iota } from './mathUtils';
 import { CoincidentVoronoi } from './coincidentVoronoi';
+import type { Sites } from './weightedVoronoiWorker';
+
+export interface RegionAssignments extends Sites {
+  regionAssignments: Set<number>[];
+  capacities: Uint32Array;
+}
 
 self.onmessage = (
   event: MessageEvent<{
     sites: Float64Array;
     densities: Float64Array;
     samples: Float64Array;
+    assignments?: Set<number>[];
     width: number;
     height: number;
   }>,
 ) => {
-  const { sites, densities, samples, width, height } = event.data;
+  const { sites, densities, samples, width, height, assignments } = event.data;
   const numSites = sites.length / 2;
   const numSamples = samples.length / 2;
 
@@ -21,8 +28,9 @@ self.onmessage = (
   // Initialization Data Structures
   const siteCapacities = new Uint32Array(numSites);
   // Book-keeping Data Structures
-  const regionContains = new Array<Set<number>>(numSites);
+  const regionContains = assignments ?? new Array<Set<number>>(numSites);
   const siteStabilities = new Array<boolean>(numSites);
+  let voronoi: CoincidentVoronoi;
 
   console.log('Initializing Capacities');
   siteStabilities.fill(false);
@@ -41,65 +49,72 @@ self.onmessage = (
     throw new Error('The generator Sites cannot contain all the Samples');
 
   postMessage({ sites: samples });
-  console.log('Assign Regions unique Sample Points');
-  /**
-   * Fill Regions with unique Sample Points
-   */
-  let voronoi = new CoincidentVoronoi(samples, [0, 0, width, height]);
-
-  const notAssigned = new Set<number>(iota(numSamples));
-  for (let i = 0, j = 0; i < numSites; ++i) {
-    /** The set of Samples this site will contain */
-    const result = new Set<number>();
-    const capacity = siteCapacities[i]!;
+  if (assignments) {
+    console.log('Using Pre-Assigned Regions');
+  } else {
+    console.log('Assign Regions unique Sample Points');
     /**
-     * The Sample closest to this Site
+     * Fill Regions with unique Sample Points
      */
-    const seed = (j = voronoi.find(
-      sites[i * 2]! + 0.1,
-      sites[1 + i * 2]! + 0.1,
-      j,
-    ));
+    voronoi = new CoincidentVoronoi(samples, [0, 0, width, height]);
 
-    // Assign the Seed if possible
-    if (notAssigned.has(seed)) {
-      result.add(seed);
-      notAssigned.delete(seed);
-    }
+    const notAssigned = new Set<number>(iota(numSamples));
+    for (let i = 0, j = 0; i < numSites; ++i) {
+      /** The set of Samples this site will contain */
+      const result = new Set<number>();
+      const capacity = siteCapacities[i]!;
+      /**
+       * The Sample closest to this Site
+       */
+      const seed = (j = voronoi.find(
+        sites[i * 2]! + 0.1,
+        sites[1 + i * 2]! + 0.1,
+        j,
+      ));
 
-    // Set of Neighbors from Seed
-    // - Infinite Depth Possible
-    // - Collect at least the Capacity still needed
-    // - Only accept Points that haven't been assigned yet
-    const neighbors = voronoi.neighborsAndNeighbors(
-      seed,
-      Infinity,
-      capacity - result.size,
-      (n) => notAssigned.has(n),
-    );
-
-    for (const neighbor of neighbors) {
-      if (result.size < capacity) {
-        result.add(neighbor);
-        notAssigned.delete(neighbor);
+      // Assign the Seed if possible
+      if (notAssigned.has(seed)) {
+        result.add(seed);
+        notAssigned.delete(seed);
       }
-      if (result.size === capacity) break;
-    }
 
-    regionContains[i] = result;
-    console.log('Assigned', result.size, 'of', capacity, 'Samples Points.');
+      // Set of Neighbors from Seed
+      // - Infinite Depth Possible
+      // - Collect at least the Capacity still needed
+      // - Only accept Points that haven't been assigned yet
+      const neighbors = voronoi.neighborsAndNeighbors(
+        seed,
+        Infinity,
+        capacity - result.size,
+        { over: 'individuals', acceptPred: (n) => notAssigned.has(n) },
+      );
+
+      for (const neighbor of neighbors) {
+        if (result.size < capacity) {
+          result.add(neighbor);
+          notAssigned.delete(neighbor);
+        }
+        if (result.size === capacity) break;
+      }
+
+      regionContains[i] = result;
+      console.log('Assigned', result.size, 'of', capacity, 'Samples Points.');
+    }
+    if (notAssigned.size !== 0)
+      throw new Error('Not all Samples were assigned to a Site.');
+    console.log('Not Assigned:', notAssigned);
   }
 
-  postMessage({ sites });
-
-  console.log('Regions:', regionContains);
-  console.log('Not Assigned:', notAssigned);
-  if (notAssigned.size !== 0)
-    throw new Error('Not all Samples were assigned to a Site.');
   if (
     regionContains.map((x) => x.size).reduce((a, c) => a + c, 0) !== numSamples
   )
     throw new Error("Voronoi Regions don't contain all samples.");
+
+  postMessage({
+    sites,
+    regionAssignments: regionContains,
+    capacities: siteCapacities,
+  } as RegionAssignments);
 
   // console.log('Updating Initial Sites');
   /**
@@ -162,49 +177,58 @@ self.onmessage = (
   /**
    * Iteration Loops
    */
-  for (let k = 0; k < 20 && !stable; ++k) {
+  for (let k = 0 /*, numRings = Infinity*/; k < Infinity && !stable; ++k) {
     console.log('Iteration:', k);
     tempStabilities.fill(true);
 
     // Iterate through points and their neighbors
     for (const i of iota(numSites)) {
-      for (const j of voronoi.neighborsAndNeighbors(i, 5)) {
-        const iLocation = point(i, sites);
-        const jLocation = point(j, sites);
+      const rings = voronoi.neighborsAndNeighbors(i, Infinity, Infinity, {
+        over: 'rings',
+        acceptPred: (n) => n > i,
+      });
+      // numRings = Math.min(numRings, rings.length);
+      for (const ring of rings) {
+        for (const j of ring) {
+          const iLocation = point(i, sites);
+          const jLocation = point(j, sites);
 
-        const iSamples = regionContains[i]!;
-        const jSamples = regionContains[j]!;
+          const iSamples = regionContains[i]!;
+          const jSamples = regionContains[j]!;
 
-        const heap_i = Array.from(iSamples, (sampleId) =>
-          heapElement(sampleId, iLocation, jLocation),
-        ).sort(sortHeap);
-        const heap_j = Array.from(jSamples, (sampleId) =>
-          heapElement(sampleId, jLocation, iLocation),
-        ).sort(sortHeap);
+          const heap_i = Array.from(iSamples, (sampleId) =>
+            heapElement(sampleId, iLocation, jLocation),
+          ).sort(sortHeap);
+          const heap_j = Array.from(jSamples, (sampleId) =>
+            heapElement(sampleId, jLocation, iLocation),
+          ).sort(sortHeap);
 
-        while (
-          heap_i.length > 0 &&
-          heap_j.length > 0 &&
-          heap_i[0]!.energyDiff + heap_j[0]!.energyDiff > 0
-        ) {
-          const swap_i = heap_i.shift()!.sampleId,
-            swap_j = heap_j.shift()!.sampleId;
-          iSamples.add(swap_j);
-          jSamples.add(swap_i);
-          iSamples.delete(swap_i);
-          jSamples.delete(swap_j);
+          while (
+            heap_i.length > 0 &&
+            heap_j.length > 0 &&
+            heap_i[0]!.energyDiff + heap_j[0]!.energyDiff > 0
+          ) {
+            const swap_i = heap_i.shift()!.sampleId,
+              swap_j = heap_j.shift()!.sampleId;
+            iSamples.add(swap_j);
+            jSamples.add(swap_i);
+            iSamples.delete(swap_i);
+            jSamples.delete(swap_j);
+          }
+
+          if (heap_i.length < iSamples.size) {
+            tempStabilities[i] = false;
+            tempStabilities[j] = false;
+            [sites[i * 2], sites[1 + i * 2]] = centroid(iSamples, samples);
+            [sites[j * 2], sites[1 + j * 2]] = centroid(jSamples, samples);
+            voronoi.update();
+          }
+
+          heap_i.length = 0;
+          heap_j.length = 0;
         }
-
-        if (heap_i.length < iSamples.size) {
-          tempStabilities[i] = false;
-          tempStabilities[j] = false;
-          [sites[i * 2], sites[1 + i * 2]] = centroid(iSamples, samples);
-          [sites[j * 2], sites[1 + j * 2]] = centroid(jSamples, samples);
-        }
-
-        heap_i.length = 0;
-        heap_j.length = 0;
       }
+      postMessage({ sites });
     }
     voronoi.update();
 
