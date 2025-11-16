@@ -110,6 +110,13 @@ self.onmessage = (
   )
     throw new Error("Voronoi Regions don't contain all samples.");
 
+  console.log('Samples Norm Cap Err:');
+  normCapErr(
+    densities,
+    new CoincidentVoronoi(samples, [0, 0, width, height]),
+    false,
+  );
+
   postMessage({
     sites,
     regionAssignments: regionContains,
@@ -171,6 +178,9 @@ self.onmessage = (
 
   voronoi = new CoincidentVoronoi(sites, [0, 0, width, height]);
 
+  console.log('Original Sites Norm Cap Err:');
+  normCapErr(densities, voronoi, false);
+
   console.log('Starting Swapping Process');
   let stable = false;
   const tempStabilities = new Array<boolean>(numSites);
@@ -229,6 +239,7 @@ self.onmessage = (
         }
       }
       postMessage({ sites });
+      normCapErr(densities, voronoi);
     }
     voronoi.update();
 
@@ -243,33 +254,43 @@ self.onmessage = (
   }
   console.log('Finished!');
 
-  const capacityOfSite = new Float64Array(numSites);
-  let totalCapacity = 0;
+  normCapErr(densities, voronoi, false);
 
-  capacityOfSite.fill(0);
-  totalCapacity = 0;
-  for (let x = 0, i = 0; x < width; ++x) {
-    for (const y of iota(height)) {
-      const w = densities[x + y * width]!;
-      i = voronoi.find(x, y, i);
-      capacityOfSite[i]! += w;
-      totalCapacity += w;
+  function normCapErr(
+    densities: Float64Array,
+    voronoi: CoincidentVoronoi,
+    summary = true,
+  ) {
+    const capacityOfSite = new Float64Array(numSites);
+    let totalCapacity = 0;
+
+    capacityOfSite.fill(0);
+    totalCapacity = 0;
+    for (let x = 0, i = 0; x < width; ++x) {
+      for (const y of iota(height)) {
+        const w = densities[x + y * width]!;
+        i = voronoi.find(x, y, i);
+        capacityOfSite[i]! += w;
+        totalCapacity += w;
+      }
     }
-  }
-  const cStar = totalCapacity / numSites;
-  const normCapErr =
-    capacityOfSite
-      .map((c) => Math.pow(c / cStar - 1, 2))
-      .reduce((acc, cur) => acc + cur, 0) / numSites;
+    const cStar = totalCapacity / numSites;
+    const normCapErr =
+      capacityOfSite
+        .map((c) => Math.pow(c / cStar - 1, 2))
+        .reduce((acc, cur) => acc + cur, 0) / numSites;
 
-  console.log(
-    'Actual Capacity:',
-    siteCapacities,
-    '\nTheorectical Capacities:',
-    capacityOfSite,
-  );
-  console.log('C* =', cStar);
-  console.log('Normalized Capacity Error:', normCapErr);
+    if (!summary) {
+      console.log(
+        'Actual Capacity:',
+        siteCapacities,
+        '\nTheorectical Capacities:',
+        capacityOfSite,
+      );
+      console.log('C* =', cStar);
+    }
+    console.log('Normalized Capacity Error:', normCapErr);
+  }
 
   close();
 };
