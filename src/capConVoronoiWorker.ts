@@ -47,45 +47,6 @@ self.onmessage = (
    */
   let voronoi = new CoincidentVoronoi(samples, [0, 0, width, height]);
 
-  const neighborsAndNeighbors = (
-    id: number,
-    depth = 2,
-    count = Infinity,
-    acceptPred?: (id: number) => boolean,
-  ) => {
-    const neighbors = [new Set([id])];
-    const result = new Set<number>();
-    let rejectCount = 0;
-
-    for (let i = 1; i < depth + 1; ++i) {
-      union(result, neighbors[i - 1]!);
-      if (result.size >= count + 1 + rejectCount) break;
-      const next = new Set<number>();
-      for (const src of neighbors[i - 1]!) {
-        for (const n of voronoi.neighbors(src)) {
-          if (!result.has(n)) {
-            if (acceptPred ? !acceptPred(n) : false) {
-              ++rejectCount;
-            }
-            next.add(n);
-          }
-        }
-      }
-      neighbors.push(next);
-      if (next.size === 0) break;
-    }
-
-    result.delete(id);
-    if (rejectCount > 0) {
-      for (const candidate of result) {
-        if (!acceptPred!(candidate)) {
-          result.delete(candidate);
-        }
-      }
-    }
-    return result;
-  };
-
   const notAssigned = new Set<number>(iota(numSamples));
   for (let i = 0, j = 0; i < numSites; ++i) {
     /** The set of Samples this site will contain */
@@ -110,7 +71,7 @@ self.onmessage = (
     // - Infinite Depth Possible
     // - Collect at least the Capacity still needed
     // - Only accept Points that haven't been assigned yet
-    const neighbors = neighborsAndNeighbors(
+    const neighbors = voronoi.neighborsAndNeighbors(
       seed,
       Infinity,
       capacity - result.size,
@@ -192,12 +153,6 @@ self.onmessage = (
     y /= count ? count : 1;
     return [x, y] as const;
   }
-  function union<T>(a: Set<T>, b: Readonly<Set<T>>) {
-    for (const el of b) {
-      a.add(el);
-    }
-    return a;
-  }
 
   voronoi = new CoincidentVoronoi(sites, [0, 0, width, height]);
 
@@ -213,7 +168,7 @@ self.onmessage = (
 
     // Iterate through points and their neighbors
     for (const i of iota(numSites)) {
-      for (const j of neighborsAndNeighbors(i, 5)) {
+      for (const j of voronoi.neighborsAndNeighbors(i, 5)) {
         const iLocation = point(i, sites);
         const jLocation = point(j, sites);
 

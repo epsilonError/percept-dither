@@ -92,3 +92,10 @@ export function distanceSq(
 ) {
   return (x0 - x1) ** 2 + (y0 - y1) ** 2;
 }
+
+export function union<T>(a: Set<T>, b: Readonly<Set<T>>) {
+  for (const el of b) {
+    a.add(el);
+  }
+  return a;
+}

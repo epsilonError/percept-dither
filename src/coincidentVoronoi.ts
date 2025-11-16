@@ -1,4 +1,5 @@
 import { Delaunay, Voronoi } from 'd3-delaunay';
+import { union } from './mathUtils';
 
 export class CoincidentVoronoi {
   delaunay: Delaunay<number>;
@@ -64,5 +65,46 @@ export class CoincidentVoronoi {
     } else {
       this.#coincidenceMap.set(a, new Set([b]));
     }
+  }
+
+  neighborsAndNeighbors(
+    id: number,
+    depth = 2,
+    count = Infinity,
+    acceptPred?: (id: number) => boolean,
+  ) {
+    const neighbors = [new Set([id])];
+    const result = new Set<number>();
+    let rejectCount = 0;
+
+    for (let i = 1; i < depth + 1; ++i) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const last = neighbors[i - 1]!;
+      union(result, last);
+      if (result.size >= count + 1 + rejectCount) break;
+      const next = new Set<number>();
+      for (const src of last) {
+        for (const n of this.neighbors(src)) {
+          if (!result.has(n)) {
+            if (acceptPred ? !acceptPred(n) : false) {
+              ++rejectCount;
+            }
+            next.add(n);
+          }
+        }
+      }
+      neighbors.push(next);
+      if (next.size === 0) break;
+    }
+
+    result.delete(id);
+    if (rejectCount > 0 && acceptPred) {
+      for (const candidate of result) {
+        if (!acceptPred(candidate)) {
+          result.delete(candidate);
+        }
+      }
+    }
+    return result;
   }
 }
