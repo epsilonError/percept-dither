@@ -284,8 +284,12 @@ self.onmessage = (
   }
   console.log('Finished!');
 
-  normCapErr(densities, voronoi, false);
+  console.log('Total Density');
+  normCapErr(densities, voronoi, true);
+  console.log('Region Density');
+  normCapErrRegion(densities, samples, regionContains, false);
 
+  /** Normalized Capacity Error for all points within a Voronoi Region */
   function normCapErr(
     densities: Float64Array,
     voronoi: CoincidentVoronoi,
@@ -301,6 +305,44 @@ self.onmessage = (
         const w = densities[x + y * width]!;
         i = voronoi.find(x, y, i);
         capacityOfSite[i]! += w;
+        totalCapacity += w;
+      }
+    }
+    const cStar = totalCapacity / numSites;
+    const normCapErr =
+      capacityOfSite
+        .map((c) => Math.pow(c / cStar - 1, 2))
+        .reduce((acc, cur) => acc + cur, 0) / numSites;
+
+    if (!summary) {
+      console.log(
+        'Actual Capacity:',
+        siteCapacities,
+        '\nTheorectical Capacities:',
+        capacityOfSite,
+      );
+      console.log('C* =', cStar);
+    }
+    console.log('Normalized Capacity Error:', normCapErr);
+  }
+
+  /** Normalized Capacity Error for Points with in an Assignment Region */
+  function normCapErrRegion(
+    densities: Float64Array,
+    samples: Float64Array,
+    assignments: Set<number>[],
+    summary = true,
+  ) {
+    const capacityOfSite = new Float64Array(numSites);
+    let totalCapacity = 0;
+
+    capacityOfSite.fill(0);
+    totalCapacity = 0;
+    for (const id of iota(numSites)) {
+      for (const sample of assignments[id] ?? []) {
+        const [x, y] = point(sample, samples);
+        const w = densities[x + y * width] ?? 0;
+        capacityOfSite[id]! += w;
         totalCapacity += w;
       }
     }

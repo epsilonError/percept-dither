@@ -29,7 +29,7 @@ const img = new Image(imgWidth, imgHeight);
 img.src = SARGENT_LIBRARY_IN_VENICE;
 
 const numSites = 64;
-const numSamples = numSites * 64;
+const numSamples = numSites * 32;
 
 // let densities: Float64Array;
 let samples: Float64Array;
