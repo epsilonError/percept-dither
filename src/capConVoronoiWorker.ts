@@ -91,47 +91,38 @@ self.onmessage = (
     /** The set of Samples this site will contain */
     const result = new Set<number>();
     const capacity = siteCapacities[i]!;
-    /** The set of Samples we've found the neighbors of */
-    const seen = new Set<number>();
     /**
-     * The next closest neighbors
-     * - Seeded with the Sample closest to this Site
+     * The Sample closest to this Site
      */
-    const neighbors = new Set([
-      (j = voronoi.find(sites[i * 2]! + 0.1, sites[1 + i * 2]! + 0.1, j)),
-    ]);
-    /** The neighbors of neighbors */
-    const nextNeighbors: Iterable<number>[] = [];
+    const seed = (j = voronoi.find(
+      sites[i * 2]! + 0.1,
+      sites[1 + i * 2]! + 0.1,
+      j,
+    ));
 
-    while (result.size < capacity) {
-      for (const candidate of neighbors) {
-        if (notAssigned.has(candidate)) {
-          result.add(candidate);
-          notAssigned.delete(candidate);
-          if (result.size === capacity) break;
-        }
+    // Assign the Seed if possible
+    if (notAssigned.has(seed)) {
+      result.add(seed);
+      notAssigned.delete(seed);
+    }
 
-        if (!seen.has(candidate)) {
-          nextNeighbors.push(voronoi.neighbors(candidate));
-          seen.add(candidate);
-        }
+    // Set of Neighbors from Seed
+    // - Infinite Depth Possible
+    // - Collect at least the Capacity still needed
+    // - Only accept Points that haven't been assigned yet
+    const neighbors = neighborsAndNeighbors(
+      seed,
+      Infinity,
+      capacity - result.size,
+      (n) => notAssigned.has(n),
+    );
+
+    for (const neighbor of neighbors) {
+      if (result.size < capacity) {
+        result.add(neighbor);
+        notAssigned.delete(neighbor);
       }
       if (result.size === capacity) break;
-      neighbors.clear();
-
-      for (const iter of nextNeighbors) {
-        for (const neighbor of iter) {
-          neighbors.add(neighbor);
-        }
-      }
-      nextNeighbors.length = 0;
-
-      // No Neighbors were found, fill from Not Assigned
-      if (neighbors.size === 0) {
-        for (const leftover of notAssigned) {
-          neighbors.add(leftover);
-        }
-      }
     }
 
     regionContains[i] = result;
@@ -149,19 +140,20 @@ self.onmessage = (
   )
     throw new Error("Voronoi Regions don't contain all samples.");
 
-  console.log('Updating Initial Sites');
+  // console.log('Updating Initial Sites');
   /**
    * Update Sites based on their now initialized Region
    */
-  for (const id of iota(numSites)) {
-    const enclosedSamples = regionContains[id];
-    if (enclosedSamples) {
-      [sites[id * 2], sites[1 + id * 2]] = centroid(enclosedSamples, samples);
-    } else {
-      throw new Error("There isn't a region for each site!");
-    }
-  }
-  postMessage({ sites });
+  // Skip Update, mainly useful for book-keeping and precalculations
+  // for (const id of iota(numSites)) {
+  //   const enclosedSamples = regionContains[id];
+  //   if (enclosedSamples) {
+  //     // [sites[id * 2], sites[1 + id * 2]] = centroid(enclosedSamples, samples);
+  //   } else {
+  //     throw new Error("There isn't a region for each site!");
+  //   }
+  // }
+  // postMessage({ sites });
 
   interface HeapKey {
     sampleId: number;
