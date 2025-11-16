@@ -2,42 +2,33 @@
 import { Delaunay } from 'd3-delaunay';
 import { iota } from './mathUtils';
 
-self.onmessage = (
-  event: MessageEvent<{
-    densities: Float64Array;
-    width: number;
-    height: number;
-    num: number;
-  }>,
-) => {
-  const { densities, width, height, num } = event.data;
-  /** The generating sites for the Voronoi Diagram */
-  const sites = new Float64Array(num * 2);
+export interface Sites {
+  sites: Float64Array;
+}
+export interface WeightedResult extends Sites {
+  capacities: Float64Array;
+  cStar: number;
+  normCapErr: number;
+}
+
+export interface WeightedMessage extends Sites {
+  densities: Float64Array;
+  width: number;
+  height: number;
+}
+
+self.onmessage = (event: MessageEvent<WeightedMessage>) => {
+  const { densities, sites, width, height } = event.data;
+  const num = sites.length / 2;
   /** The centroid for each Voronoi Region (the x or y position of each point in the region weighted by the point's density)*/
   const centroids = new Float64Array(num * 2);
   /** The density for each centroid (sum of all weights in the region)*/
   const weights = new Float64Array(num);
 
-  const maxDensity = densities.reduce((m, cur) => Math.max(m, cur), 0);
-  /** Scale the comparison since the range of the random numbers is [0,1) */
-  const scale = maxDensity < 1 ? 1 : maxDensity + 0.001;
-
   /**
    * Initialize Voronoi
    * - find Sites through rejection sampling
-   * - make Voronoi Diagram from Sites
    */
-  for (let i = 0; i < num; ++i) {
-    const x = (sites[i * 2] = Math.floor(Math.random() * width));
-    const y = (sites[1 + i * 2] = Math.floor(Math.random() * height));
-    const u = Math.random();
-    const comp = densities[x + y * width]! / scale;
-    if (u < comp) {
-      /* Accepted */
-    } else {
-      --i;
-    }
-  }
 
   const delaunay = new Delaunay<number>(sites);
   const voronoi = delaunay.voronoi([0, 0, width, height]);
@@ -78,7 +69,7 @@ self.onmessage = (
       sites[1 + i * 2] = y0 + (y1 - y0) * 1.8 + randomDisplacement();
     }
 
-    postMessage(sites);
+    postMessage({ sites });
     voronoi.update();
   }
 
@@ -101,6 +92,8 @@ self.onmessage = (
   console.log('Capacities:', weights);
   console.log('C* =', cStar);
   console.log('Normalized Capacity Error:', normCapErr);
+
+  postMessage({ sites, cStar, capacities: weights, normCapErr });
 
   close();
 };
