@@ -30,6 +30,7 @@ self.onmessage = (
   // Book-keeping Data Structures
   const regionContains = assignments ?? new Array<Set<number>>(numSites);
   const siteStabilities = new Array<boolean>(numSites);
+  const siteSqRadii = new Float64Array(numSites);
   let voronoi: CoincidentVoronoi;
 
   console.log('Initializing Capacities');
@@ -98,11 +99,12 @@ self.onmessage = (
       }
 
       regionContains[i] = result;
-      console.log('Assigned', result.size, 'of', capacity, 'Samples Points.');
+      // console.log('Assigned', result.size, 'of', capacity, 'Samples Points.');
     }
-    if (notAssigned.size !== 0)
+    if (notAssigned.size !== 0) {
+      console.log('Not Assigned:', notAssigned);
       throw new Error('Not all Samples were assigned to a Site.');
-    console.log('Not Assigned:', notAssigned);
+    }
   }
 
   if (
@@ -123,20 +125,32 @@ self.onmessage = (
     capacities: siteCapacities,
   } as RegionAssignments);
 
-  // console.log('Updating Initial Sites');
+  console.log('Initialize Sites Bookkeeping');
   /**
    * Update Sites based on their now initialized Region
    */
-  // Skip Update, mainly useful for book-keeping and precalculations
-  // for (const id of iota(numSites)) {
-  //   const enclosedSamples = regionContains[id];
-  //   if (enclosedSamples) {
-  //     // [sites[id * 2], sites[1 + id * 2]] = centroid(enclosedSamples, samples);
-  //   } else {
-  //     throw new Error("There isn't a region for each site!");
-  //   }
-  // }
-  // postMessage({ sites });
+  const update = (id: number): void => {
+    const location = point(id, sites);
+    let squaredRadius = 0;
+    for (const sample of regionContains[id]!) {
+      squaredRadius = Math.max(
+        squaredRadius,
+        distanceSq(location, point(sample, samples)),
+      );
+    }
+    siteSqRadii[id] = squaredRadius;
+  };
+  // Initialize book-keeping and precalculations
+  siteSqRadii.fill(0);
+  for (const id of iota(numSites)) {
+    const enclosedSamples = regionContains[id];
+    if (enclosedSamples) {
+      // [sites[id * 2], sites[1 + id * 2]] = centroid(enclosedSamples, samples);
+    } else {
+      throw new Error("There isn't a region for each site!");
+    }
+    update(id);
+  }
 
   interface HeapKey {
     sampleId: number;
@@ -190,16 +204,23 @@ self.onmessage = (
   for (let k = 0 /*, numRings = Infinity*/; k < Infinity && !stable; ++k) {
     console.log('Iteration:', k);
     tempStabilities.fill(true);
+    const visited = new Array<number>();
 
     // Iterate through points and their neighbors
     for (const i of iota(numSites)) {
+      visited.length = 0;
       const rings = voronoi.neighborsAndNeighbors(i, Infinity, Infinity, {
         over: 'rings',
-        acceptPred: (n) => n > i,
+        acceptPred: (n) =>
+          n > i &&
+          Math.sqrt(distanceSq(point(i, sites), point(n, sites))) <
+            Math.sqrt(siteSqRadii[i]!) + Math.sqrt(siteSqRadii[n]!),
       });
       // numRings = Math.min(numRings, rings.length);
       for (const ring of rings) {
         for (const j of ring) {
+          visited.push(j);
+
           const iLocation = point(i, sites);
           const jLocation = point(j, sites);
 
@@ -232,13 +253,22 @@ self.onmessage = (
             [sites[i * 2], sites[1 + i * 2]] = centroid(iSamples, samples);
             [sites[j * 2], sites[1 + j * 2]] = centroid(jSamples, samples);
             voronoi.update();
+            update(i);
+            update(j);
           }
 
           heap_i.length = 0;
           heap_j.length = 0;
         }
       }
+      rings.length = 0;
       postMessage({ sites });
+      // console.log(
+      //   'Visited:',
+      //   visited.length,
+      //   'Revisited:',
+      //   visited.length - new Set(visited).size,
+      // );
       normCapErr(densities, voronoi);
     }
     voronoi.update();
