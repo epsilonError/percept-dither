@@ -18,16 +18,25 @@ export class CoincidentVoronoi {
   delaunay: Delaunay<number>;
   voronoi: Voronoi<number>;
   width: number;
+  height: number;
   #coincidenceMap: Map<number, Set<number>>;
   #coincidentId: Map<number, number>;
 
   constructor(points: Float64Array, bounds: Delaunay.Bounds) {
-    this.width = bounds[2];
+    [this.width, this.height] = [bounds[2], bounds[3]];
     this.delaunay = new Delaunay(points);
     this.voronoi = this.delaunay.voronoi(bounds);
     this.#coincidenceMap = new Map();
     this.#coincidentId = new Map();
     this.#coincident();
+  }
+
+  get points() {
+    return this.delaunay.points;
+  }
+
+  get numPoints() {
+    return this.delaunay.points.length / 2;
   }
 
   #position(id: number) {

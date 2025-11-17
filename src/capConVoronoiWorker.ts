@@ -156,9 +156,6 @@ self.onmessage = (
     sampleId: number;
     energyDiff: number;
   }
-  function point(id: number, source: Float64Array) {
-    return [source[id * 2]!, source[1 + id * 2]!] as const;
-  }
   function heapElement(
     sampleId: number,
     compareA: readonly [number, number],
@@ -293,28 +290,11 @@ self.onmessage = (
   function normCapErr(
     densities: Float64Array,
     voronoi: CoincidentVoronoi,
-    summary = true,
+    verbose = false,
   ) {
-    const capacityOfSite = new Float64Array(numSites);
-    let totalCapacity = 0;
-
-    capacityOfSite.fill(0);
-    totalCapacity = 0;
-    for (let x = 0, i = 0; x < width; ++x) {
-      for (const y of iota(height)) {
-        const w = densities[x + y * width]!;
-        i = voronoi.find(x, y, i);
-        capacityOfSite[i]! += w;
-        totalCapacity += w;
-      }
-    }
-    const cStar = totalCapacity / numSites;
-    const normCapErr =
-      capacityOfSite
-        .map((c) => Math.pow(c / cStar - 1, 2))
-        .reduce((acc, cur) => acc + cur, 0) / numSites;
-
-    if (!summary) {
+    const { cStar, normCapErrDens, capacityOfSite } =
+      normalizedCapacityErrorDensities(densities, voronoi);
+    if (verbose) {
       console.log(
         'Actual Capacity:',
         siteCapacities,
@@ -323,46 +303,89 @@ self.onmessage = (
       );
       console.log('C* =', cStar);
     }
-    console.log('Normalized Capacity Error:', normCapErr);
+    console.log('Normalized Capacity Error:', normCapErrDens);
   }
 
-  /** Normalized Capacity Error for Points with in an Assignment Region */
+  /** Normalized Capacity Error for Sample Points within an Assignment Region */
   function normCapErrRegion(
     densities: Float64Array,
     samples: Float64Array,
     assignments: Set<number>[],
-    summary = true,
+    verbose = false,
   ) {
-    const capacityOfSite = new Float64Array(numSites);
-    let totalCapacity = 0;
+    const { cStar, cPrimeStar, normCapErrRegs, capacityOfSite } =
+      normalizedCapacityErrorRegions(densities, samples, assignments, width);
 
-    capacityOfSite.fill(0);
-    totalCapacity = 0;
-    for (const id of iota(numSites)) {
-      for (const sample of assignments[id] ?? []) {
-        const [x, y] = point(sample, samples);
-        const w = densities[x + y * width] ?? 0;
-        capacityOfSite[id]! += w;
-        totalCapacity += w;
-      }
-    }
-    const cStar = totalCapacity / numSites;
-    const normCapErr =
-      capacityOfSite
-        .map((c) => Math.pow(c / cStar - 1, 2))
-        .reduce((acc, cur) => acc + cur, 0) / numSites;
-
-    if (!summary) {
+    if (verbose) {
       console.log(
-        'Actual Capacity:',
+        'Actual Capacities:',
         siteCapacities,
         '\nTheorectical Capacities:',
         capacityOfSite,
       );
       console.log('C* =', cStar);
+      console.log('C′* =', cPrimeStar);
     }
-    console.log('Normalized Capacity Error:', normCapErr);
+    console.log('Normalized Capacity Error:', normCapErrRegs);
   }
 
   close();
 };
+
+export function normalizedCapacityErrorDensities(
+  densities: Float64Array,
+  voronoi: CoincidentVoronoi,
+) {
+  const capacityOfSite = new Float64Array(voronoi.numPoints);
+  let totalCapacity = 0;
+
+  capacityOfSite.fill(0);
+  totalCapacity = 0;
+  for (let x = 0, i = 0; x < voronoi.width; ++x) {
+    for (const y of iota(voronoi.height)) {
+      const w = densities[x + y * voronoi.width]!;
+      i = voronoi.find(x, y, i);
+      capacityOfSite[i]! += w;
+      totalCapacity += w;
+    }
+  }
+  const cStar = totalCapacity / voronoi.numPoints;
+  const normCapErrDens =
+    capacityOfSite.reduce((acc, cur) => acc + Math.pow(cur / cStar - 1, 2), 0) /
+    voronoi.numPoints;
+
+  return { cStar, normCapErrDens, capacityOfSite };
+}
+
+function point(id: number, source: Float64Array) {
+  return [source[id * 2]!, source[1 + id * 2]!] as const;
+}
+
+function normalizedCapacityErrorRegions(
+  densities: Float64Array,
+  samples: Float64Array,
+  assignments: Iterable<number>[],
+  width: number,
+) {
+  const numSites = assignments.length;
+  const capacityOfSite = new Float64Array(assignments.length);
+  let totalCapacity = 0;
+
+  capacityOfSite.fill(0);
+  totalCapacity = 0;
+  for (const id of iota(numSites)) {
+    for (const sample of assignments[id] ?? []) {
+      const [x, y] = point(sample, samples);
+      const w = densities[x + y * width] ?? 0;
+      capacityOfSite[id]! += w;
+      totalCapacity += w;
+    }
+  }
+  const cPrimeStar = totalCapacity / numSites;
+  const cStar = densities.reduce((acc, cur) => acc + cur, 0) / numSites;
+  const normCapErrRegs =
+    capacityOfSite.reduce((acc, cur) => acc + Math.pow(cur / cStar - 1, 2), 0) /
+    numSites;
+
+  return { cStar, cPrimeStar, normCapErrRegs, capacityOfSite };
+}
