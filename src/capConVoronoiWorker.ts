@@ -189,8 +189,30 @@ self.onmessage = (
 
   voronoi = new CoincidentVoronoi(sites, [0, 0, width, height]);
 
-  console.log('Original Sites Norm Cap Err:');
-  normCapErr(densities, voronoi, false);
+  console.log('\nOriginal Sites Norm Cap Err:');
+  normCapErr(densities, voronoi);
+  function regionAssignmentsFromVoronoi(
+    samples: Float64Array,
+    voronoi: CoincidentVoronoi,
+  ): Set<number>[] {
+    const result = new Array<Set<number>>(voronoi.numPoints);
+    for (let i = 0, k = 0; i < samples.length / 2; ++i) {
+      const [x, y] = point(i, samples);
+      k = voronoi.find(x, y, k);
+      if (result[k] === undefined) {
+        result[k] = new Set([i]);
+      } else {
+        result[k]?.add(i);
+      }
+    }
+    return result;
+  }
+  normCapErrRegion(
+    densities,
+    samples,
+    regionAssignmentsFromVoronoi(samples, voronoi),
+  );
+  console.log();
 
   console.log('Starting Swapping Process');
   let stable = false;
@@ -281,10 +303,10 @@ self.onmessage = (
   }
   console.log('Finished!');
 
-  console.log('Total Density');
+  console.log('\nTotal Density');
   normCapErr(densities, voronoi, true);
   console.log('Region Density');
-  normCapErrRegion(densities, samples, regionContains, false);
+  normCapErrRegion(densities, samples, regionContains, true);
 
   /** Normalized Capacity Error for all points within a Voronoi Region */
   function normCapErr(
@@ -298,12 +320,13 @@ self.onmessage = (
       console.log(
         'Actual Capacity:',
         siteCapacities,
-        '\nTheorectical Capacities:',
+        '\nTheoretical Capacities:',
         capacityOfSite,
       );
       console.log('C* =', cStar);
     }
-    console.log('Normalized Capacity Error:', normCapErrDens);
+    console.log('Voronoi Normalized Capacity Error:', normCapErrDens);
+    if (verbose) console.log();
   }
 
   /** Normalized Capacity Error for Sample Points within an Assignment Region */
@@ -320,13 +343,13 @@ self.onmessage = (
       console.log(
         'Actual Capacities:',
         siteCapacities,
-        '\nTheorectical Capacities:',
+        '\nTheoretical Capacities:',
         capacityOfSite,
       );
       console.log('C* =', cStar);
       console.log('C′* =', cPrimeStar);
     }
-    console.log('Normalized Capacity Error:', normCapErrRegs);
+    console.log('Region Normalized Capacity Error:', normCapErrRegs);
   }
 
   close();
