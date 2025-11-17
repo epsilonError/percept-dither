@@ -59,13 +59,13 @@ export class CoincidentVoronoi {
   }
 
   *neighbors(i: number): Iterable<number> {
-    yield* this.voronoi.neighbors(i);
     if (this.#coincidenceMap.has(i)) {
       for (const id of this.#coincidenceMap.get(i) ?? []) {
         yield id;
         yield* this.#coincidenceMap.get(id) ?? [];
       }
     }
+    yield* this.voronoi.neighbors(i);
   }
 
   #coincident() {
