@@ -113,11 +113,7 @@ self.onmessage = (
     throw new Error("Voronoi Regions don't contain all samples.");
 
   console.log('Samples Norm Cap Err:');
-  normCapErr(
-    densities,
-    new CoincidentVoronoi(samples, [0, 0, width, height]),
-    false,
-  );
+  normCapErr(densities, new CoincidentVoronoi(samples, [0, 0, width, height]));
 
   postMessage({
     sites,
