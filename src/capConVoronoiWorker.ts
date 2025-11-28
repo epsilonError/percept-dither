@@ -236,28 +236,49 @@ self.onmessage = (
   console.log();
 
   console.log('Starting Swapping Process');
+  /** Tracks the current steady/stable state of the swaps */
+  let steady = false;
+  /** Tracks if the swaps were stable at least once in the past */
   let stable = false;
   const tempStabilities = new Array<boolean>(numSites);
   /**
    * Iteration Loops
    */
-  for (let k = 0 /*, numRings = Infinity*/; k < Infinity && !stable; ++k) {
+  for (let k = 0; k < Infinity && !(stable && steady); ++k) {
     console.log('Iteration:', k);
     tempStabilities.fill(true);
     const visited = new Array<number>();
 
-    // Iterate through points and their neighbors
-    for (const i of iota(numSites)) {
+    /** Prioritize Sites with the longest radii,
+     *  for this first 3 iterations and the last one/few
+     */
+    const orderedSites = () =>
+      k < 3 || stable
+        ? Array.from(iota(numSites)).sort(
+            (a, b) => siteSqRadii[b]! - siteSqRadii[a]!,
+          )
+        : iota(numSites);
+
+    // Iterate through prioritized sites and their neighbors
+    for (const i of orderedSites()) {
       visited.length = 0;
-      // TODO: Figure out why Array.from works while the plain generator does not
-      const intersectingRegions = Array.from(
-        voronoi.neighborsAndNeighbors(i, Infinity, Infinity, {
-          over: 'individuals',
+      /**
+       * Nearest intersecting regions with Site i.
+       *
+       * For the first 2 iterations, checks every possible site.
+       * Afterwards, only checks until 2 empty rings of neighbors occur
+       * And for the last one/few, check every possible site again.
+       */
+      const intersectingRegions = voronoi.neighborsAndNeighbors(
+        i,
+        Infinity,
+        Infinity,
+        {
+          over: k < 2 || stable ? 'individuals' : 'rings',
           acceptPred: (n) =>
-            n > i &&
             Math.sqrt(distanceSq(point(i, sites), point(n, sites))) <
-              Math.sqrt(siteSqRadii[i]!) + Math.sqrt(siteSqRadii[n]!),
-        }),
+            Math.sqrt(siteSqRadii[i]!) + Math.sqrt(siteSqRadii[n]!),
+        },
       );
 
       for (const j of intersectingRegions) {
@@ -303,6 +324,7 @@ self.onmessage = (
         }
 
         if (swapped) {
+          console.log('Swapped!');
           tempStabilities[i] = false;
           tempStabilities[j] = false;
           [sites[i * 2], sites[1 + i * 2]] = centroid(
@@ -313,7 +335,6 @@ self.onmessage = (
             assignedToRegion(j),
             samples,
           );
-          voronoi.update();
           update(i);
           update(j);
         }
@@ -329,17 +350,22 @@ self.onmessage = (
       //   'Revisited:',
       //   visited.length - new Set(visited).size,
       // );
-      normCapErr(densities, voronoi);
     }
     voronoi.update();
+    normCapErr(densities, voronoi);
 
     // Stability check
-    stable = true;
+    steady = true;
     for (let idx = 0; idx < numSites; ++idx) {
       siteStabilities[idx] = tempStabilities[idx]!;
-      stable &&= tempStabilities[idx]!;
+      steady &&= tempStabilities[idx]!;
     }
-    console.log('Iteration is Stable:', stable);
+    // Once Steady, set Stable and reset Steady
+    if (steady && !stable) {
+      stable = true;
+      steady = false;
+    }
+    console.log('Iteration is Steady:', steady, 'Stable:', stable);
     postMessage({ sites });
   }
   console.log('Finished!');
