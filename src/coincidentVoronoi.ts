@@ -103,12 +103,13 @@ export class CoincidentVoronoi {
       let rejectLocal = 0;
       const next = new Set<number>();
       for (const src of last) {
+        // TODO: Test that this.neighbors only returns unique values
         for (const n of this.neighbors(src)) {
-          if (!result.has(n)) {
-            if (options.acceptPred ? !options.acceptPred(n) : false) {
-              if (!next.has(n)) ++rejectLocal; // TODO: Test that this.neighbors only returns unique values
+          if (!result.has(n) && !next.has(n)) {
+            if (options.acceptPred ? options.acceptPred(n) : true) {
+              yield n;
             } else {
-              if (!next.has(n)) yield n;
+              ++rejectLocal;
             }
             next.add(n);
           }
