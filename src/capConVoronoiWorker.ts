@@ -13,12 +13,14 @@ self.onmessage = (
     sites: Float64Array;
     densities: Float64Array;
     samples: Float64Array;
-    assignments?: Iterable<number>[];
+    assignments?: Uint32Array;
+    capacities?: Uint32Array;
     width: number;
     height: number;
   }>,
 ) => {
-  const { sites, densities, samples, width, height, assignments } = event.data;
+  const { sites, densities, samples, width, height, assignments, capacities } =
+    event.data;
   const numSites = sites.length / 2;
   const numSamples = samples.length / 2;
   const assignmentOffset = Math.ceil(numSamples / numSites);
@@ -37,17 +39,22 @@ self.onmessage = (
   // const sampleDistSq = new Float64Array(numSamples);
   let voronoi: CoincidentVoronoi;
 
-  console.log('Initializing Capacities');
-  let overallCapacity = numSamples;
-  /**
-   * Initialize Capacities
-   */
-  for (const i of iota(numSites)) {
-    const capacity = Math.floor(overallCapacity / (numSites - i));
-    overallCapacity -= capacity;
-    siteCapacities[i] = capacity >>> 0;
-
-    siteStabilities[i] = false;
+  if (capacities) {
+    console.log('Using Provided Capacities');
+    for (let i = 0; i < capacities.length; ++i) {
+      siteCapacities[i] = capacities[i]!;
+    }
+  } else {
+    console.log('Initializing Capacities');
+    let overallCapacity = numSamples;
+    /**
+     * Initialize Capacities
+     */
+    for (const i of iota(numSites)) {
+      const capacity = Math.floor(overallCapacity / (numSites - i));
+      overallCapacity -= capacity;
+      siteCapacities[i] = capacity >>> 0;
+    }
   }
   if (siteCapacities.reduce((acc, cur) => acc + cur, 0) !== numSamples)
     throw new Error('The generator Sites cannot contain all the Samples');
@@ -55,11 +62,8 @@ self.onmessage = (
   postMessage({ sites: samples });
   if (assignments) {
     console.log('Using Pre-Assigned Regions');
-    for (const siteId of iota(numSites)) {
-      let j = 0;
-      for (const sampleId of assignments[siteId] ?? []) {
-        regionAssignments[j++ + assignmentOffset * siteId] = sampleId;
-      }
+    for (let i = 0; i < assignments.length; ++i) {
+      regionAssignments[i] = assignments[i]!;
     }
   } else {
     console.log('Assign Regions unique Sample Points');
