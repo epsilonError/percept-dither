@@ -92,6 +92,7 @@ export class CoincidentVoronoi {
   ): Iterable<number> {
     const neighbors = [new Set([id])];
     const result = new Set<number>();
+    let hadEmptyRing = false;
     let rejectCount = 0;
 
     for (let i = 1; i < depth + 1; ++i) {
@@ -114,7 +115,14 @@ export class CoincidentVoronoi {
         }
       }
       rejectCount += rejectLocal;
-      if (options.over === 'rings' && next.size <= rejectLocal) break;
+      if (options.over === 'rings' && next.size <= rejectLocal) {
+        // Break if we've previously had an empty ring of neighbors
+        if (hadEmptyRing) {
+          break;
+        } else {
+          hadEmptyRing = true;
+        }
+      }
       neighbors.push(next);
       if (next.size === 0) break;
     }
