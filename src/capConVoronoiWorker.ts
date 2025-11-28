@@ -4,7 +4,7 @@ import { CoincidentVoronoi } from './coincidentVoronoi';
 import type { Sites } from './weightedVoronoiWorker';
 
 export interface RegionAssignments extends Sites {
-  regionAssignments: Set<number>[];
+  regionAssignments: Uint32Array;
   capacities: Uint32Array;
 }
 
@@ -13,7 +13,7 @@ self.onmessage = (
     sites: Float64Array;
     densities: Float64Array;
     samples: Float64Array;
-    assignments?: Set<number>[];
+    assignments?: Iterable<number>[];
     width: number;
     height: number;
   }>,
@@ -21,20 +21,23 @@ self.onmessage = (
   const { sites, densities, samples, width, height, assignments } = event.data;
   const numSites = sites.length / 2;
   const numSamples = samples.length / 2;
+  const assignmentOffset = Math.ceil(numSamples / numSites);
 
   if (numSamples / numSites < 1)
     throw new Error('Too few Samples and/or too many generator Sites');
 
   // Initialization Data Structures
   const siteCapacities = new Uint32Array(numSites);
+  const regionAssignments = new Uint32Array(assignmentOffset * numSites);
+  regionAssignments.fill(NaN);
   // Book-keeping Data Structures
-  const regionContains = assignments ?? new Array<Set<number>>(numSites);
   const siteStabilities = new Array<boolean>(numSites);
+  siteStabilities.fill(false);
   const siteSqRadii = new Float64Array(numSites);
+  // const sampleDistSq = new Float64Array(numSamples);
   let voronoi: CoincidentVoronoi;
 
   console.log('Initializing Capacities');
-  siteStabilities.fill(false);
   let overallCapacity = numSamples;
   /**
    * Initialize Capacities
@@ -52,6 +55,12 @@ self.onmessage = (
   postMessage({ sites: samples });
   if (assignments) {
     console.log('Using Pre-Assigned Regions');
+    for (const siteId of iota(numSites)) {
+      let j = 0;
+      for (const sampleId of assignments[siteId] ?? []) {
+        regionAssignments[j++ + assignmentOffset * siteId] = sampleId;
+      }
+    }
   } else {
     console.log('Assign Regions unique Sample Points');
     /**
@@ -98,7 +107,11 @@ self.onmessage = (
         if (result.size === capacity) break;
       }
 
-      regionContains[i] = result;
+      let idx = 0;
+      for (const sampleId of result) {
+        regionAssignments[idx + i * assignmentOffset] = sampleId;
+        ++idx;
+      }
       // console.log('Assigned', result.size, 'of', capacity, 'Samples Points.');
     }
     if (notAssigned.size !== 0) {
@@ -106,10 +119,9 @@ self.onmessage = (
       throw new Error('Not all Samples were assigned to a Site.');
     }
   }
-
-  if (
-    regionContains.map((x) => x.size).reduce((a, c) => a + c, 0) !== numSamples
-  )
+  const uniqueSamples = new Set(regionAssignments);
+  uniqueSamples.delete(NaN);
+  if (uniqueSamples.size !== numSamples)
     throw new Error("Voronoi Regions don't contain all samples.");
 
   console.log('Samples Norm Cap Err:');
@@ -117,18 +129,32 @@ self.onmessage = (
 
   postMessage({
     sites,
-    regionAssignments: regionContains,
+    regionAssignments,
     capacities: siteCapacities,
   } as RegionAssignments);
 
   console.log('Initialize Sites Bookkeeping');
+  /**
+   * Iterable of SampleIds assigned to a Region
+   */
+  const assignedToRegion = function* (siteId: number): Iterable<number> {
+    for (const i of iota(assignmentOffset)) {
+      const result = regionAssignments[i + assignmentOffset * siteId] ?? NaN;
+      if (!Number.isNaN(result)) {
+        yield result;
+      } else {
+        break;
+      }
+    }
+  };
+
   /**
    * Update Sites based on their now initialized Region
    */
   const update = (id: number): void => {
     const location = point(id, sites);
     let squaredRadius = 0;
-    for (const sample of regionContains[id]!) {
+    for (const sample of assignedToRegion(id)) {
       squaredRadius = Math.max(
         squaredRadius,
         distanceSq(location, point(sample, samples)),
@@ -139,8 +165,8 @@ self.onmessage = (
   // Initialize book-keeping and precalculations
   siteSqRadii.fill(0);
   for (const id of iota(numSites)) {
-    const enclosedSamples = regionContains[id];
-    if (enclosedSamples) {
+    const enclosedSamples = Array.from(assignedToRegion(id));
+    if (enclosedSamples.length !== 0) {
       // [sites[id * 2], sites[1 + id * 2]] = centroid(enclosedSamples, samples);
     } else {
       throw new Error("There isn't a region for each site!");
@@ -150,16 +176,19 @@ self.onmessage = (
 
   interface HeapKey {
     sampleId: number;
+    swapLocation: number;
     energyDiff: number;
   }
   function heapElement(
     sampleId: number,
+    swapLocation: number,
     compareA: readonly [number, number],
     compareB: readonly [number, number],
   ): HeapKey {
     const loc = point(sampleId, samples);
     return {
       sampleId,
+      swapLocation,
       energyDiff: distanceSq(loc, compareA) - distanceSq(loc, compareB),
     };
   }
@@ -231,22 +260,36 @@ self.onmessage = (
           Math.sqrt(distanceSq(point(i, sites), point(n, sites))) <
             Math.sqrt(siteSqRadii[i]!) + Math.sqrt(siteSqRadii[n]!),
       });
-      // numRings = Math.min(numRings, rings.length);
+
       for (const ring of rings) {
         for (const j of ring) {
           visited.push(j);
+          let swapped = false;
 
           const iLocation = point(i, sites);
           const jLocation = point(j, sites);
 
-          const iSamples = regionContains[i]!;
-          const jSamples = regionContains[j]!;
+          const iSamples = assignedToRegion(i);
+          const jSamples = assignedToRegion(j);
 
+          /** Index of SampleId in Region assignment */
+          let idx = 0;
           const heap_i = Array.from(iSamples, (sampleId) =>
-            heapElement(sampleId, iLocation, jLocation),
+            heapElement(
+              sampleId,
+              idx++ + assignmentOffset * i,
+              iLocation,
+              jLocation,
+            ),
           ).sort(sortHeap);
+          idx = 0;
           const heap_j = Array.from(jSamples, (sampleId) =>
-            heapElement(sampleId, jLocation, iLocation),
+            heapElement(
+              sampleId,
+              idx++ + assignmentOffset * j,
+              jLocation,
+              iLocation,
+            ),
           ).sort(sortHeap);
 
           while (
@@ -254,19 +297,24 @@ self.onmessage = (
             heap_j.length > 0 &&
             heap_i[0]!.energyDiff + heap_j[0]!.energyDiff > 0
           ) {
-            const swap_i = heap_i.shift()!.sampleId,
-              swap_j = heap_j.shift()!.sampleId;
-            iSamples.add(swap_j);
-            jSamples.add(swap_i);
-            iSamples.delete(swap_i);
-            jSamples.delete(swap_j);
+            swapped = true;
+            const swap_i = heap_i.shift()!,
+              swap_j = heap_j.shift()!;
+            regionAssignments[swap_i.swapLocation] = swap_j.sampleId;
+            regionAssignments[swap_j.swapLocation] = swap_i.sampleId;
           }
 
-          if (heap_i.length < iSamples.size) {
+          if (swapped) {
             tempStabilities[i] = false;
             tempStabilities[j] = false;
-            [sites[i * 2], sites[1 + i * 2]] = centroid(iSamples, samples);
-            [sites[j * 2], sites[1 + j * 2]] = centroid(jSamples, samples);
+            [sites[i * 2], sites[1 + i * 2]] = centroid(
+              assignedToRegion(i),
+              samples,
+            );
+            [sites[j * 2], sites[1 + j * 2]] = centroid(
+              assignedToRegion(j),
+              samples,
+            );
             voronoi.update();
             update(i);
             update(j);
@@ -302,7 +350,12 @@ self.onmessage = (
   console.log('\nTotal Density');
   normCapErr(densities, voronoi, true);
   console.log('Region Density');
-  normCapErrRegion(densities, samples, regionContains, true);
+  normCapErrRegion(
+    densities,
+    samples,
+    Array.from(iota(numSites), (id) => assignedToRegion(id)),
+    true,
+  );
 
   /** Normalized Capacity Error for all points within a Voronoi Region */
   function normCapErr(
@@ -329,7 +382,7 @@ self.onmessage = (
   function normCapErrRegion(
     densities: Float64Array,
     samples: Float64Array,
-    assignments: Set<number>[],
+    assignments: Iterable<number>[],
     verbose = false,
   ) {
     const { cStar, cPrimeStar, normCapErrRegs, capacityOfSite } =
