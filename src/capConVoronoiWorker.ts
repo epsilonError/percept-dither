@@ -71,7 +71,6 @@ self.onmessage = (
     const notAssigned = new Set<number>(iota(numSamples));
     for (let i = 0, j = 0; i < numSites; ++i) {
       /** The set of Samples this site will contain */
-      const result = new Set<number>();
       const capacity = siteCapacities[i]!;
       /**
        * The Sample closest to this Site
@@ -82,10 +81,13 @@ self.onmessage = (
         j,
       ));
 
+      /** Index of Sample in Region */
+      let idx = 0;
       // Assign the Seed if possible
       if (notAssigned.has(seed)) {
-        result.add(seed);
+        regionAssignments[idx++ + i * assignmentOffset] = seed;
         notAssigned.delete(seed);
+        if (idx === capacity) continue;
       }
 
       // Set of Neighbors from Seed
@@ -95,22 +97,16 @@ self.onmessage = (
       const neighbors = voronoi.neighborsAndNeighbors(
         seed,
         Infinity,
-        capacity - result.size,
+        capacity - idx,
         { over: 'individuals', acceptPred: (n) => notAssigned.has(n) },
       );
 
       for (const neighbor of neighbors) {
-        if (result.size < capacity) {
-          result.add(neighbor);
+        if (idx < capacity) {
+          regionAssignments[idx++ + i * assignmentOffset] = neighbor;
           notAssigned.delete(neighbor);
         }
-        if (result.size === capacity) break;
-      }
-
-      let idx = 0;
-      for (const sampleId of result) {
-        regionAssignments[idx + i * assignmentOffset] = sampleId;
-        ++idx;
+        if (idx === capacity) break;
       }
       // console.log('Assigned', result.size, 'of', capacity, 'Samples Points.');
     }
@@ -253,78 +249,79 @@ self.onmessage = (
     // Iterate through points and their neighbors
     for (const i of iota(numSites)) {
       visited.length = 0;
-      const rings = voronoi.neighborsAndNeighbors(i, Infinity, Infinity, {
-        over: 'rings',
-        acceptPred: (n) =>
-          n > i &&
-          Math.sqrt(distanceSq(point(i, sites), point(n, sites))) <
-            Math.sqrt(siteSqRadii[i]!) + Math.sqrt(siteSqRadii[n]!),
-      });
+      // TODO: Figure out why Array.from works while the plain generator does not
+      const intersectingRegions = Array.from(
+        voronoi.neighborsAndNeighbors(i, Infinity, Infinity, {
+          over: 'individuals',
+          acceptPred: (n) =>
+            n > i &&
+            Math.sqrt(distanceSq(point(i, sites), point(n, sites))) <
+              Math.sqrt(siteSqRadii[i]!) + Math.sqrt(siteSqRadii[n]!),
+        }),
+      );
 
-      for (const ring of rings) {
-        for (const j of ring) {
-          visited.push(j);
-          let swapped = false;
+      for (const j of intersectingRegions) {
+        visited.push(j);
+        let swapped = false;
 
-          const iLocation = point(i, sites);
-          const jLocation = point(j, sites);
+        const iLocation = point(i, sites);
+        const jLocation = point(j, sites);
 
-          const iSamples = assignedToRegion(i);
-          const jSamples = assignedToRegion(j);
+        const iSamples = assignedToRegion(i);
+        const jSamples = assignedToRegion(j);
 
-          /** Index of SampleId in Region assignment */
-          let idx = 0;
-          const heap_i = Array.from(iSamples, (sampleId) =>
-            heapElement(
-              sampleId,
-              idx++ + assignmentOffset * i,
-              iLocation,
-              jLocation,
-            ),
-          ).sort(sortHeap);
-          idx = 0;
-          const heap_j = Array.from(jSamples, (sampleId) =>
-            heapElement(
-              sampleId,
-              idx++ + assignmentOffset * j,
-              jLocation,
-              iLocation,
-            ),
-          ).sort(sortHeap);
+        /** Index of SampleId in Region assignment */
+        let idx = 0;
+        const heap_i = Array.from(iSamples, (sampleId) =>
+          heapElement(
+            sampleId,
+            idx++ + assignmentOffset * i,
+            iLocation,
+            jLocation,
+          ),
+        ).sort(sortHeap);
+        idx = 0;
+        const heap_j = Array.from(jSamples, (sampleId) =>
+          heapElement(
+            sampleId,
+            idx++ + assignmentOffset * j,
+            jLocation,
+            iLocation,
+          ),
+        ).sort(sortHeap);
 
-          while (
-            heap_i.length > 0 &&
-            heap_j.length > 0 &&
-            heap_i[0]!.energyDiff + heap_j[0]!.energyDiff > 0
-          ) {
-            swapped = true;
-            const swap_i = heap_i.shift()!,
-              swap_j = heap_j.shift()!;
-            regionAssignments[swap_i.swapLocation] = swap_j.sampleId;
-            regionAssignments[swap_j.swapLocation] = swap_i.sampleId;
-          }
-
-          if (swapped) {
-            tempStabilities[i] = false;
-            tempStabilities[j] = false;
-            [sites[i * 2], sites[1 + i * 2]] = centroid(
-              assignedToRegion(i),
-              samples,
-            );
-            [sites[j * 2], sites[1 + j * 2]] = centroid(
-              assignedToRegion(j),
-              samples,
-            );
-            voronoi.update();
-            update(i);
-            update(j);
-          }
-
-          heap_i.length = 0;
-          heap_j.length = 0;
+        while (
+          heap_i.length > 0 &&
+          heap_j.length > 0 &&
+          heap_i[0]!.energyDiff + heap_j[0]!.energyDiff > 0
+        ) {
+          swapped = true;
+          const swap_i = heap_i.shift()!,
+            swap_j = heap_j.shift()!;
+          regionAssignments[swap_i.swapLocation] = swap_j.sampleId;
+          regionAssignments[swap_j.swapLocation] = swap_i.sampleId;
         }
+
+        if (swapped) {
+          tempStabilities[i] = false;
+          tempStabilities[j] = false;
+          [sites[i * 2], sites[1 + i * 2]] = centroid(
+            assignedToRegion(i),
+            samples,
+          );
+          [sites[j * 2], sites[1 + j * 2]] = centroid(
+            assignedToRegion(j),
+            samples,
+          );
+          voronoi.update();
+          update(i);
+          update(j);
+        }
+
+        heap_i.length = 0;
+        heap_j.length = 0;
       }
-      rings.length = 0;
+
       postMessage({ sites });
       // console.log(
       //   'Visited:',

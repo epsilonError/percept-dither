@@ -5,14 +5,6 @@ interface NeighborAndNeighborsOptions {
   over: 'individuals' | 'rings';
   acceptPred?: (id: number) => boolean;
 }
-interface NeighborAndNeighborsIndividuals {
-  over: 'individuals';
-  acceptPred?: (id: number) => boolean;
-}
-interface NeighborAndNeighborsRings {
-  over: 'rings';
-  acceptPred?: (id: number) => boolean;
-}
 
 export class CoincidentVoronoi {
   delaunay: Delaunay<number>;
@@ -92,24 +84,12 @@ export class CoincidentVoronoi {
     }
   }
 
-  neighborsAndNeighbors(
-    id: number,
-    depth: number,
-    count: number,
-    options: NeighborAndNeighborsIndividuals,
-  ): Set<number>;
-  neighborsAndNeighbors(
-    id: number,
-    depth: number,
-    count: number,
-    options: NeighborAndNeighborsRings,
-  ): Set<number>[];
-  neighborsAndNeighbors(
+  *neighborsAndNeighbors(
     id: number,
     depth = 2,
     count = Infinity,
     options: NeighborAndNeighborsOptions = { over: 'individuals' },
-  ) {
+  ): Iterable<number> {
     const neighbors = [new Set([id])];
     const result = new Set<number>();
     let rejectCount = 0;
@@ -125,7 +105,9 @@ export class CoincidentVoronoi {
         for (const n of this.neighbors(src)) {
           if (!result.has(n)) {
             if (options.acceptPred ? !options.acceptPred(n) : false) {
-              ++rejectLocal; // TODO: Test that this.neighbors only returns unique values
+              if (!next.has(n)) ++rejectLocal; // TODO: Test that this.neighbors only returns unique values
+            } else {
+              if (!next.has(n)) yield n;
             }
             next.add(n);
           }
@@ -136,31 +118,7 @@ export class CoincidentVoronoi {
       neighbors.push(next);
       if (next.size === 0) break;
     }
-
-    if (options.over === 'individuals') {
-      result.delete(id);
-      if (rejectCount > 0 && options.acceptPred) {
-        for (const candidate of result) {
-          if (!options.acceptPred(candidate)) {
-            result.delete(candidate);
-          }
-        }
-      }
-      neighbors.length = 0;
-      return result;
-    } /*(options.over === 'rings')*/ else {
-      neighbors.shift();
-      if (rejectCount > 0 && options.acceptPred) {
-        for (const ring of neighbors) {
-          for (const candidate of ring) {
-            if (!options.acceptPred(candidate)) {
-              ring.delete(candidate);
-            }
-          }
-        }
-      }
-      result.clear();
-      return neighbors;
-    }
+    neighbors.length = 0;
+    result.clear();
   }
 }
