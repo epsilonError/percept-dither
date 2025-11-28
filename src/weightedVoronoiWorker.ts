@@ -92,6 +92,12 @@ self.onmessage = (event: MessageEvent<WeightedMessage>) => {
   console.log('Capacities:', weights);
   console.log('C* =', cStar);
   console.log('Normalized Capacity Error:', normCapErr);
+  console.log(
+    'Total Density:',
+    totalCapacity,
+    'Max Capacity:',
+    weights.reduce((a, c) => Math.max(a, c), 0),
+  );
 
   postMessage({ sites, cStar, capacities: weights, normCapErr });
 
