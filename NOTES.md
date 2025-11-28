@@ -129,3 +129,13 @@ Weighted uses a set of Sample Points from an image to make a Voronoi Diagram, an
 Capacity-Constrained uses a Set of Samples Points from an image, and a Set of Sites that come with a Capacity constraint. The Sites describe a Voronoi Region that enclose a constrained number of Sample Points. The enclosed Points are swapped between Sites so the Capacity is maintained but the region is changed. After all Sites swap Sample Points, each Site's location is moved to the centroid of its enclosed points. The swaps and Site location changes are performed for each step.
 
 So comparatively: Weighted mutates the sampled points based on centroids and weights from portions of the underlying distribution and those mutated points are site locations and the final stipple dots. Capacity-Constrained has independent sampled points and site locations, but the site locations— which are also the final dots— slide between the preserved points. (I wonder which samples less from the underlying image? Probably also depends on the iterations needed.) Since Capacity-Constrained could swap points between any/all sites it has a higher memory [O(n+m) vs O(n) or O(n+m)] and time [O(n²+nm⋅log(m/n)) vs. O(m⋅log(n))] complexity.
+
+### Interesting Tidbits
+
+The Normalized Capacity Error gives some interesting data points. It is a decent minimization function, but more interesting to me are what I picked up from it.
+
+Basically the global scalar c\* is the integration over the density function (the grayscale image) divided by the number of generating Sites. This is the Capacity we want each region to contain in the Capacity-Constrained Version. But by summing the densities contained in each Weighted Voronoi Regions an upper and lower bound to the Capacity per Region can be found.
+
+And this upper bound works well for me as a crude estimate for the minimum number of Samples for each Capacity-Constrained Region to contain.
+
+Also, having the number of Sites close to the integrated density function seems to look the best to me. (Now figuring out what to size the radius for each stippling dot is my next big thing. Ideas: match Pixel & Dot area, radius = median distance of contained Samples, ...)
