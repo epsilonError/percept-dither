@@ -60,10 +60,13 @@ export class CoincidentVoronoi {
 
   *neighbors(i: number): Iterable<number> {
     if (this.#coincidenceMap.has(i)) {
-      for (const id of this.#coincidenceMap.get(i) ?? []) {
-        yield id;
-        yield* this.#coincidenceMap.get(id) ?? [];
+      const coincidents = new Set<number>();
+      union(coincidents, this.#coincidenceMap.get(i) ?? new Set());
+      for (const id of coincidents) {
+        union(coincidents, this.#coincidenceMap.get(id) ?? new Set());
       }
+      coincidents.delete(i);
+      yield* coincidents;
     }
     yield* this.voronoi.neighbors(i);
   }
