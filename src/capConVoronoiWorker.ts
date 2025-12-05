@@ -127,11 +127,15 @@ self.onmessage = (
   console.log('Samples Norm Cap Err:');
   normCapErr(densities, new CoincidentVoronoi(samples, [0, 0, width, height]));
 
-  postMessage({
-    sites,
-    regionAssignments,
-    capacities: siteCapacities,
-  } as RegionAssignments);
+  if (assignments === undefined) {
+    postMessage({
+      sites,
+      regionAssignments,
+      capacities: siteCapacities,
+    } as RegionAssignments);
+  } else {
+    postMessage({ sites });
+  }
 
   voronoi = new CoincidentVoronoi(sites, [0, 0, width, height]);
 
@@ -367,6 +371,7 @@ self.onmessage = (
     Array.from(iota(numSites), (id) => assignedToRegion(id)),
     true,
   );
+  console.log();
 
   /** Normalized Capacity Error for all points within a Voronoi Region */
   function normCapErr(
@@ -412,7 +417,13 @@ self.onmessage = (
     console.log('Region Normalized Capacity Error:', normCapErrRegs);
   }
 
-  close();
+  postMessage({
+    sites,
+    regionAssignments,
+    capacities: siteCapacities,
+  } as RegionAssignments);
+
+  // close();
 };
 
 export function normalizedCapacityErrorDensities(
