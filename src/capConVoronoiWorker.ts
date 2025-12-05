@@ -133,6 +133,33 @@ self.onmessage = (
     capacities: siteCapacities,
   } as RegionAssignments);
 
+  voronoi = new CoincidentVoronoi(sites, [0, 0, width, height]);
+
+  console.log('\nOriginal Sites Norm Cap Err:');
+  normCapErr(densities, voronoi);
+  function regionAssignmentsFromVoronoi(
+    samples: Float64Array,
+    voronoi: CoincidentVoronoi,
+  ): Set<number>[] {
+    const result = new Array<Set<number>>(voronoi.numPoints);
+    for (let i = 0, k = 0; i < samples.length / 2; ++i) {
+      const [x, y] = point(i, samples);
+      k = voronoi.find(x, y, k);
+      if (result[k] === undefined) {
+        result[k] = new Set([i]);
+      } else {
+        result[k]?.add(i);
+      }
+    }
+    return result;
+  }
+  normCapErrRegion(
+    densities,
+    samples,
+    regionAssignmentsFromVoronoi(samples, voronoi),
+  );
+  console.log();
+
   console.log('Initialize Sites Bookkeeping');
   /**
    * Iterable of SampleIds assigned to a Region
@@ -149,10 +176,13 @@ self.onmessage = (
   };
 
   /**
-   * Update Sites based on their now initialized Region
+   * Update Site based on its Region
+   * - Moves the site location to the centroid of its points
+   * - Calcs the maxSquaredRadius from that centroid to its points
    */
   const update = (id: number): void => {
-    const location = point(id, sites);
+    const location = centroid(assignedToRegion(id), samples);
+    [sites[id * 2], sites[1 + id * 2]] = location;
     let squaredRadius = 0;
     for (const sample of assignedToRegion(id)) {
       squaredRadius = Math.max(
@@ -166,13 +196,22 @@ self.onmessage = (
   siteSqRadii.fill(0);
   for (const id of iota(numSites)) {
     const enclosedSamples = Array.from(assignedToRegion(id));
-    if (enclosedSamples.length !== 0) {
-      // [sites[id * 2], sites[1 + id * 2]] = centroid(enclosedSamples, samples);
-    } else {
+    if (enclosedSamples.length === 0) {
       throw new Error("There isn't a region for each site!");
     }
     update(id);
   }
+
+  postMessage({ sites });
+  console.log('\nFirst Assigned Sites Norm Cap Err:');
+  voronoi.update();
+  normCapErr(densities, voronoi);
+  normCapErrRegion(
+    densities,
+    samples,
+    Array.from(iota(numSites), (id) => assignedToRegion(id)),
+  );
+  console.log();
 
   interface HeapKey {
     sampleId: number;
@@ -212,81 +251,46 @@ self.onmessage = (
     return [x, y] as const;
   }
 
-  voronoi = new CoincidentVoronoi(sites, [0, 0, width, height]);
-
-  console.log('\nOriginal Sites Norm Cap Err:');
-  normCapErr(densities, voronoi);
-  function regionAssignmentsFromVoronoi(
-    samples: Float64Array,
-    voronoi: CoincidentVoronoi,
-  ): Set<number>[] {
-    const result = new Array<Set<number>>(voronoi.numPoints);
-    for (let i = 0, k = 0; i < samples.length / 2; ++i) {
-      const [x, y] = point(i, samples);
-      k = voronoi.find(x, y, k);
-      if (result[k] === undefined) {
-        result[k] = new Set([i]);
-      } else {
-        result[k]?.add(i);
-      }
-    }
-    return result;
-  }
-  normCapErrRegion(
-    densities,
-    samples,
-    regionAssignmentsFromVoronoi(samples, voronoi),
-  );
-  console.log();
-
   console.log('Starting Swapping Process');
-  /** Tracks the current steady/stable state of the swaps */
-  let steady = false;
-  /** Tracks if the swaps were stable at least once in the past */
+  /** Tracks if the swaps stablized in the iteration */
   let stable = false;
   const tempStabilities = new Array<boolean>(numSites);
   /**
    * Iteration Loops
    */
-  for (let k = 0; k < Infinity && !(stable && steady); ++k) {
+  for (let k = 0; k < Infinity && !stable; ++k) {
     console.log('Iteration:', k);
     tempStabilities.fill(true);
-    const visited = new Array<number>();
 
-    /** Prioritize Sites with the longest radii,
-     *  for this first 3 iterations and the last one/few
+    /**
+     * Prioritize Sites with the longest radii
      */
     const orderedSites = () =>
-      k < 3 || stable
-        ? Array.from(iota(numSites)).sort(
-            (a, b) => siteSqRadii[b]! - siteSqRadii[a]!,
-          )
-        : iota(numSites);
+      Array.from(iota(numSites)).sort(
+        (a, b) => siteSqRadii[b]! - siteSqRadii[a]!,
+      );
 
     // Iterate through prioritized sites and their neighbors
     for (const i of orderedSites()) {
-      visited.length = 0;
       /**
        * Nearest intersecting regions with Site i.
        *
        * For the first 2 iterations, checks every possible site.
        * Afterwards, only checks until 2 empty rings of neighbors occur
-       * And for the last one/few, check every possible site again.
        */
       const intersectingRegions = voronoi.neighborsAndNeighbors(
         i,
         Infinity,
         Infinity,
         {
-          over: k < 2 || stable ? 'individuals' : 'rings',
+          over: k < 2 ? 'individuals' : 'rings',
           acceptPred: (n) =>
-            Math.sqrt(distanceSq(point(i, sites), point(n, sites))) <
+            Math.sqrt(distanceSq(point(i, sites), point(n, sites))) <=
             Math.sqrt(siteSqRadii[i]!) + Math.sqrt(siteSqRadii[n]!),
         },
       );
 
       for (const j of intersectingRegions) {
-        visited.push(j);
         let swapped = false;
 
         const iLocation = point(i, sites);
@@ -331,14 +335,6 @@ self.onmessage = (
           console.log('Swapped!');
           tempStabilities[i] = false;
           tempStabilities[j] = false;
-          [sites[i * 2], sites[1 + i * 2]] = centroid(
-            assignedToRegion(i),
-            samples,
-          );
-          [sites[j * 2], sites[1 + j * 2]] = centroid(
-            assignedToRegion(j),
-            samples,
-          );
           update(i);
           update(j);
         }
@@ -348,29 +344,17 @@ self.onmessage = (
       }
 
       postMessage({ sites });
-      // console.log(
-      //   'Visited:',
-      //   visited.length,
-      //   'Revisited:',
-      //   visited.length - new Set(visited).size,
-      // );
     }
     voronoi.update();
     normCapErr(densities, voronoi);
 
     // Stability check
-    steady = true;
-    for (let idx = 0; idx < numSites; ++idx) {
-      siteStabilities[idx] = tempStabilities[idx]!;
-      steady &&= tempStabilities[idx]!;
+    stable = true;
+    for (const id of iota(numSites)) {
+      siteStabilities[id] = tempStabilities[id]!;
+      stable &&= tempStabilities[id]!;
     }
-    // Once Steady, set Stable and reset Steady
-    if (steady && !stable) {
-      stable = true;
-      steady = false;
-    }
-    console.log('Iteration is Steady:', steady, 'Stable:', stable);
-    postMessage({ sites });
+    console.log('Iteration is Stable:', stable);
   }
   console.log('Finished!');
 
