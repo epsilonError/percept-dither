@@ -1,10 +1,10 @@
-import {
-  smallTestSet,
-  // storedAssignments,
-  // storedDensities,
-  // storedSamples,
-  // storedSites,
-} from './capConBackup.ts';
+// import {
+//   smallTestSet,
+//   // storedAssignments,
+//   // storedDensities,
+//   // storedSamples,
+//   // storedSites,
+// } from './capConBackup.ts';
 import type { RegionAssignments } from './capConVoronoiWorker.ts';
 import { SARGENT_LIBRARY_IN_VENICE } from './images.ts';
 import type {
@@ -31,25 +31,25 @@ img.src = SARGENT_LIBRARY_IN_VENICE;
 const numSites = 64;
 const numSamples = numSites * 32;
 
-// let densities: Float64Array;
+let densities: Float64Array;
 let samples: Float64Array;
-// let sites: Float64Array;
-// let regionAssignments: Set<number>[];
+let sites: Float64Array;
+// let regionAssignments: Uint32Array;
 // let cStar: number;
 
 /** Backup Supply */
 // densities = storedDensities();
-// samples = storedSamples();
-// sites = storedSites();
-// regionAssignments = storedAssignments();
-const { densities, width, height } = smallTestSet();
+// samples = storedSamples(102800);
+// sites = storedSites(102800);
+// regionAssignments = storedAssignments(102800);
+// const { densities, width, height } = smallTestSet();
 
-// const greyWorker = new Worker(
-//   new URL('./perceptGrayDataWorker.ts', import.meta.url),
-//   {
-//     type: 'module',
-//   },
-// );
+const greyWorker = new Worker(
+  new URL('./perceptGrayDataWorker.ts', import.meta.url),
+  {
+    type: 'module',
+  },
+);
 const weightedWorker = new Worker(
   new URL('./weightedVoronoiWorker.ts', import.meta.url),
   {
@@ -71,18 +71,19 @@ const samplingWorker = new Worker(
 
 img.onload = () => {
   weightContext.drawImage(img, 0, 0);
-  // const { data, width, height } = weightContext.getImageData(
-  //   0,
-  //   0,
-  //   imgWidth,
-  //   imgHeight,
-  // );
+  const { data, width, height } = weightContext.getImageData(
+    0,
+    0,
+    imgWidth,
+    imgHeight,
+  );
 
   function drawDots(
     ev: MessageEvent<Sites>,
     context: CanvasRenderingContext2D,
   ) {
     const { sites } = ev.data;
+    const radius = Math.SQRT1_2;
     context.reset();
     context.fillStyle = '#fff';
     context.fillRect(0, 0, imgWidth, imgHeight);
@@ -92,8 +93,8 @@ img.onload = () => {
       const x = sites[i]!,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         y = sites[i + 1]!;
-      context.moveTo(x + 1.5, y);
-      context.arc(x, y, 1.5, 0, 2 * Math.PI);
+      context.moveTo(x + radius, y);
+      context.arc(x, y, radius, 0, 2 * Math.PI);
     }
     context.fillStyle = '#000';
     context.fill();
@@ -112,7 +113,7 @@ img.onload = () => {
     //   console.log('Capacities');
     //   console.log(ev.data.capacities.toString());
     //   console.log('Region Assignments');
-    //   console.log(regionAssignments.map((x) => Array.from(x)).toString());
+    //   console.log(regionAssignments.toString());
     // }
     drawDots(ev, capConContext);
   };
@@ -123,55 +124,55 @@ img.onload = () => {
   //   densities,
   //   sites,
   //   samples,
-  //   assignments: regionAssignments,
+  //   // assignments: regionAssignments,
   //   width: imgWidth,
   //   height: imgHeight,
   // });
-  // greyWorker.onmessage = (ev: MessageEvent<Float64Array>) => {
-  //   const points = ev.data;
-  //   // Invert Lightness Scale to move points to dark areas
-  //   for (let i = 0; i < points.length; ++i) {
-  //     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  //     points[i] = Math.max(0, 1 - points[i]!);
-  //   }
-  //  densities = points;
-
-  /** Sample from Points */
-  samplingWorker.onmessage = (ev: MessageEvent<Float64Array>) => {
-    samples = ev.data;
-    const partialSamples = new Float64Array(numSites * 2);
-
-    console.log('Subsample sample space for Weighted Sites');
-    for (let i = 0; i < numSites; ++i) {
-      const site = Math.floor(Math.random() * numSamples);
+  greyWorker.onmessage = (ev: MessageEvent<Float64Array>) => {
+    const points = ev.data;
+    // Invert Lightness Scale to move points to dark areas
+    for (let i = 0; i < points.length; ++i) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      partialSamples[i * 2] = samples[site * 2]!;
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      partialSamples[1 + i * 2] = samples[1 + site * 2]!;
+      points[i] = Math.max(0, 1 - points[i]!);
     }
+    densities = points;
 
-    weightedWorker.onmessage = (ev: MessageEvent<WeightedResult>) => {
-      drawDots(ev, weightContext);
-      if (ev.data.cStar) {
-        // sites = ev.data.sites;
-        // cStar = ev.data.cStar;
-        capConWorker.postMessage({
-          densities,
-          sites: ev.data.sites,
-          samples,
-          width,
-          height,
-        });
+    /** Sample from Points */
+    samplingWorker.onmessage = (ev: MessageEvent<Float64Array>) => {
+      samples = ev.data;
+      const partialSamples = new Float64Array(numSites * 2);
+
+      console.log('Subsample sample space for Weighted Sites');
+      for (let i = 0; i < numSites; ++i) {
+        const site = Math.floor(Math.random() * numSamples);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        partialSamples[i * 2] = samples[site * 2]!;
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        partialSamples[1 + i * 2] = samples[1 + site * 2]!;
       }
+
+      weightedWorker.onmessage = (ev: MessageEvent<WeightedResult>) => {
+        drawDots(ev, weightContext);
+        if (ev.data.cStar) {
+          sites = ev.data.sites;
+          // cStar = ev.data.cStar;
+          capConWorker.postMessage({
+            densities,
+            sites,
+            samples,
+            width,
+            height,
+          });
+        }
+      };
+      weightedWorker.postMessage({
+        densities,
+        width,
+        height,
+        sites: partialSamples,
+      } as WeightedMessage);
     };
-    weightedWorker.postMessage({
-      densities,
-      width,
-      height,
-      sites: partialSamples,
-    } as WeightedMessage);
+    samplingWorker.postMessage({ densities, numSamples, width, height });
   };
-  samplingWorker.postMessage({ densities, numSamples, width, height });
-  // };
-  // greyWorker.postMessage({ img: data, width, height });
+  greyWorker.postMessage({ img: data, width, height });
 };
