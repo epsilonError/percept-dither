@@ -423,7 +423,9 @@ self.onmessage = (
     capacities: siteCapacities,
   } as RegionAssignments);
 
-  // close();
+  console.log(regionAssignments.toString()); // Log Final Assignments before closure
+
+  close();
 };
 
 export function normalizedCapacityErrorDensities(
