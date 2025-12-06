@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { distanceSq, iota } from './mathUtils';
+import {
+  centroid,
+  distanceSq,
+  iota,
+  nonNaNGroupValues,
+  point,
+} from './mathUtils';
 import { CoincidentVoronoi } from './coincidentVoronoi';
 import type { Sites } from './weightedVoronoiWorker';
 
@@ -168,16 +174,8 @@ self.onmessage = (
   /**
    * Iterable of SampleIds assigned to a Region
    */
-  const assignedToRegion = function* (siteId: number): Iterable<number> {
-    for (const i of iota(assignmentOffset)) {
-      const result = regionAssignments[i + assignmentOffset * siteId] ?? NaN;
-      if (!Number.isNaN(result)) {
-        yield result;
-      } else {
-        break;
-      }
-    }
-  };
+  const assignedToRegion = (id: number) =>
+    nonNaNGroupValues(id, regionAssignments, assignmentOffset);
 
   /**
    * Update Site based on its Region
@@ -237,22 +235,6 @@ self.onmessage = (
   }
   function sortHeap(a: HeapKey, b: HeapKey) {
     return b.energyDiff - a.energyDiff;
-  }
-  function centroid(points: Iterable<number>, source: Float64Array) {
-    let x = 0,
-      y = 0,
-      count = 0;
-
-    for (const id of points) {
-      const [x1, y1] = point(id, source);
-      x += x1;
-      y += y1;
-      ++count;
-    }
-
-    x /= count ? count : 1;
-    y /= count ? count : 1;
-    return [x, y] as const;
   }
 
   console.log('Starting Swapping Process');
@@ -451,10 +433,6 @@ export function normalizedCapacityErrorDensities(
     voronoi.numPoints;
 
   return { cStar, normCapErrDens, capacityOfSite };
-}
-
-function point(id: number, source: Float64Array) {
-  return [source[id * 2]!, source[1 + id * 2]!] as const;
 }
 
 function normalizedCapacityErrorRegions(
