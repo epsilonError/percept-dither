@@ -99,3 +99,51 @@ export function union<T>(a: Set<T>, b: Readonly<Set<T>>) {
   }
   return a;
 }
+
+/**
+ * Iterable of non-NaN numbers within a grouping (`id`)
+ * of length `offset` from a flat `source` array
+ */
+export function* nonNaNGroupValues(
+  id: number,
+  source: Readonly<Uint32Array>,
+  offset: number,
+): Iterable<number> {
+  for (const i of iota(offset)) {
+    const result = source[i + offset * id] ?? NaN;
+    if (!Number.isNaN(result)) {
+      yield result;
+    } else {
+      break;
+    }
+  }
+}
+
+/**
+ * Calc the 2D centroid using an iterable of point ids
+ * and their flat `source` array
+ */
+export function centroid(
+  points: Iterable<number>,
+  source: Readonly<Float64Array>,
+): readonly [number, number] {
+  let x = 0,
+    y = 0,
+    count = 0;
+
+  for (const id of points) {
+    const [x1, y1] = point(id, source);
+    x += x1;
+    y += y1;
+    ++count;
+  }
+
+  x /= count ? count : 1;
+  y /= count ? count : 1;
+  return [x, y] as const;
+}
+
+/** Grab a point from a flat array structure */
+export function point(id: number, source: Readonly<Float64Array>) {
+  return [source[id * 2] ?? NaN, source[1 + id * 2] ?? NaN] as const;
+}
