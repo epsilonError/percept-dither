@@ -147,3 +147,11 @@ export function centroid(
 export function point(id: number, source: Readonly<Float64Array>) {
   return [source[id * 2] ?? NaN, source[1 + id * 2] ?? NaN] as const;
 }
+
+export function sum(values: Iterable<number>) {
+  let sum = 0;
+  for (const v of values) {
+    sum += v;
+  }
+  return sum;
+}

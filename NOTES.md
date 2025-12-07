@@ -138,4 +138,4 @@ Basically the global scalar c\* is the integration over the density function (th
 
 And this upper bound works well for me as a crude estimate for the minimum number of Samples for each Capacity-Constrained Region to contain.
 
-Also, having the number of Sites close to the integrated density function seems to look the best to me. (Now figuring out what to size the radius for each stippling dot is my next big thing. Ideas: match Pixel & Dot area, radius = median distance of contained Samples, ...)
+Also, having the number of Sites close to the integrated density function seems to look the best to me. (Now figuring out what to size the radius for each stippling dot is my next big thing. Ideas: match Pixel & Dot area, ~~radius = median distance of contained Samples~~[a site may be placed in white space], inscribe Pixel/Dot, _scale dots to total density equivalent_...)

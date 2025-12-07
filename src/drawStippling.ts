@@ -7,11 +7,22 @@
 // } from './capConBackup.ts';
 import type { RegionAssignments } from './capConVoronoiWorker.ts';
 import { SARGENT_LIBRARY_IN_VENICE } from './images.ts';
+import { iota, point, sum } from './mathUtils.ts';
 import type {
   Sites,
   WeightedMessage,
   WeightedResult,
 } from './weightedVoronoiWorker.ts';
+
+/** Baseline Radius that may be scaled when drawn */
+const BASE_RADIUS = {
+  /** Circle inscribed in a 1x1 pixel */
+  INSCRIBED_DOT: 0.5 as const,
+  /** Circle with Equal Area to a 1x1 pixel */
+  AREA_MATCHING: Math.sqrt(1 / Math.PI),
+  /** Circle that inscribes a 1x1 pixel */
+  INSCRIBED_PIXEL: Math.SQRT1_2,
+} as const;
 
 const canvasWeighted = document.getElementById(
   'canvasWeighted',
@@ -36,12 +47,14 @@ let samples: Float64Array;
 let sites: Float64Array;
 // let regionAssignments: Uint32Array;
 // let cStar: number;
+let totalDensity: number;
 
 /** Backup Supply */
 // densities = storedDensities();
-// samples = storedSamples(102800);
+// totalDensity = sum(densities);
+// samples = storedSamples('20527Stable');
 // sites = storedSites(102800);
-// regionAssignments = storedAssignments(102800);
+// regionAssignments = storedAssignments('20527Stable');
 // const { densities, width, height } = smallTestSet();
 
 const greyWorker = new Worker(
@@ -69,6 +82,55 @@ const samplingWorker = new Worker(
   },
 );
 
+function drawDots(
+  ev: MessageEvent<Sites>,
+  context: CanvasRenderingContext2D,
+  totalDensity?: number,
+  verbose = false,
+) {
+  const { sites } = ev.data;
+  const numSites = sites.length / 2;
+
+  /**
+   * Scale the radius based on the total density
+   *
+   * - Total Density is the equivalent area of black pixels.
+   * - Each site needs its own coverage of this area.
+   * - And square root the coverage to go from an area to a length
+   *
+   * That length can be used to scale the radius.
+   */
+  const scaleFactor = totalDensity ? Math.sqrt(totalDensity / numSites) : 1;
+
+  if (totalDensity && verbose) {
+    console.log(
+      '_________\nDensities\n Total:',
+      totalDensity,
+      '\n Scale Factor:',
+      scaleFactor,
+    );
+  }
+
+  context.reset();
+  context.fillStyle = '#fff';
+  context.fillRect(0, 0, imgWidth, imgHeight);
+  context.beginPath();
+  for (const i of iota(numSites)) {
+    const [x, y] = point(i, sites);
+
+    context.moveTo(x, y);
+    context.arc(
+      x + 0.5,
+      y + 0.5,
+      BASE_RADIUS.AREA_MATCHING * scaleFactor,
+      0,
+      2 * Math.PI,
+    );
+  }
+  context.fillStyle = '#000';
+  context.fill();
+}
+
 img.onload = () => {
   weightContext.drawImage(img, 0, 0);
   const { data, width, height } = weightContext.getImageData(
@@ -78,48 +140,27 @@ img.onload = () => {
     imgHeight,
   );
 
-  function drawDots(
-    ev: MessageEvent<Sites>,
-    context: CanvasRenderingContext2D,
-  ) {
-    const { sites } = ev.data;
-    const radius = Math.SQRT1_2;
-    context.reset();
-    context.fillStyle = '#fff';
-    context.fillRect(0, 0, imgWidth, imgHeight);
-    context.beginPath();
-    for (let i = 0; i < sites.length; i += 2) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const x = sites[i]!,
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        y = sites[i + 1]!;
-      context.moveTo(x + radius, y);
-      context.arc(x, y, radius, 0, 2 * Math.PI);
-    }
-    context.fillStyle = '#000';
-    context.fill();
-  }
-
+  /**
+   * Draw Dots without processing
+   */
   // drawDots({ data: { sites: sites } } as MessageEvent<Sites>, weightContext);
-  capConWorker.onmessage = (ev: MessageEvent<RegionAssignments>) => {
-    // if (ev.data.regionAssignments) {
-    //   regionAssignments = ev.data.regionAssignments;
-    //   console.log('Densities');
-    //   console.log(densities.toString());
-    //   console.log('Samples');
-    //   console.log(samples.toString());
-    //   console.log('Sites');
-    //   console.log(sites.toString());
-    //   console.log('Capacities');
-    //   console.log(ev.data.capacities.toString());
-    //   console.log('Region Assignments');
-    //   console.log(regionAssignments.toString());
-    // }
-    drawDots(ev, capConContext);
-  };
-  // weightedWorker.onmessage = (ev: MessageEvent<WeightedResult>) => {
-  //   drawDots(ev, weightContext);
+  // drawDots(
+  //   {
+  //     data: {
+  //       sites,
+  //     },
+  //   } as MessageEvent<Sites>,
+  //   capConContext,
+  //   totalDensity,
+  // );
+
+  /**
+   * Draw starting Sites and run Capacity Constrained Voronoi with them
+   */
+  // capConWorker.onmessage = (ev: MessageEvent<RegionAssignments>) => {
+  //   drawDots(ev, capConContext, totalDensity);
   // };
+  // drawDots({ data: { sites: sites } } as MessageEvent<Sites>, weightContext);
   // capConWorker.postMessage({
   //   densities,
   //   sites,
@@ -128,6 +169,14 @@ img.onload = () => {
   //   width: imgWidth,
   //   height: imgHeight,
   // });
+
+  /**
+   * Entire Processing Pipeline
+   * - Make Densities with grayscale image data grayscale
+   * - Use Rejection Sampling for Sample points
+   *   - Use Sub-sample for Weighted Voronoi sites
+   *     - Use final Weighted Sites and all Samples for Capacity Constrained Voronoi
+   */
   greyWorker.onmessage = (ev: MessageEvent<Float64Array>) => {
     const points = ev.data;
     // Invert Lightness Scale to move points to dark areas
@@ -136,6 +185,7 @@ img.onload = () => {
       points[i] = Math.max(0, 1 - points[i]!);
     }
     densities = points;
+    totalDensity = sum(densities);
 
     /** Sample from Points */
     samplingWorker.onmessage = (ev: MessageEvent<Float64Array>) => {
@@ -151,8 +201,12 @@ img.onload = () => {
         partialSamples[1 + i * 2] = samples[1 + site * 2]!;
       }
 
+      capConWorker.onmessage = (ev: MessageEvent<RegionAssignments>) => {
+        drawDots(ev, capConContext, totalDensity);
+      };
+
       weightedWorker.onmessage = (ev: MessageEvent<WeightedResult>) => {
-        drawDots(ev, weightContext);
+        drawDots(ev, weightContext, totalDensity);
         if (ev.data.cStar) {
           sites = ev.data.sites;
           // cStar = ev.data.cStar;
