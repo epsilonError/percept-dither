@@ -100,6 +100,15 @@ export function union<T>(a: Set<T>, b: Readonly<Set<T>>) {
   return a;
 }
 
+export function difference<T>(a: Readonly<Set<T>>, b: Readonly<Set<T>>) {
+  const result = new Set<T>();
+  union(result, a);
+  for (const el of b) {
+    result.delete(el);
+  }
+  return result;
+}
+
 /**
  * Iterable of non-NaN numbers within a grouping (`id`)
  * of length `offset` from a flat `source` array

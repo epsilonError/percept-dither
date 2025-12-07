@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import {
   centroid,
+  // difference,
   distanceSq,
   iota,
   nonNaNGroupValues,
   point,
+  union,
 } from './mathUtils';
 import { CoincidentVoronoi } from './coincidentVoronoi';
 import type { Sites } from './weightedVoronoiWorker';
@@ -250,13 +252,22 @@ self.onmessage = (
   console.log('Starting Swapping Process');
   /** Tracks if the swaps stablized in the iteration */
   let stable = false;
-  const tempStabilities = new Array<boolean>(numSites);
+  /**
+   * The stability for each site during the iteration.
+   * - Undefined = hasn't been visited
+   * - Boolean = stability state after visiting
+   */
+  const tempStabilities = new Array<boolean | undefined>(numSites);
+  /**
+   * Tracks Sites that weren't checked for swaps during the previous iteration
+   */
+  const notVisited = new Set(iota(numSites));
   /**
    * Iteration Loops
    */
   for (let k = 0; k < Infinity && !stable; ++k) {
     console.log('Iteration:', k);
-    tempStabilities.fill(true);
+    tempStabilities.fill(undefined);
 
     /**
      * Prioritize Sites with the longest radii
@@ -271,15 +282,22 @@ self.onmessage = (
       /**
        * Nearest intersecting regions with Site i.
        *
-       * For the first 2 iterations, checks every possible site.
-       * Afterwards, only checks until 2 empty rings of neighbors occur
+       * Checks every other possible site:
+       * - For the first 3 iterations, or
+       * - If the current site isn't stable.
+       * Otherwise, only checks until 2 empty rings of neighbors occur.
+       *
+       * Checks every possible site for the first 3 iterations, because
+       * the third iteration tends to be the earliest Sites end up
+       * unvisited and/or skipped. @todo Check the number of iterations
+       * heuristic (2 could be a reasonable choice as well)
        */
       const intersectingRegions = voronoi.neighborsAndNeighbors(
         i,
         Infinity,
         Infinity,
         {
-          over: k < 2 ? 'individuals' : 'rings',
+          over: k < 3 || !siteStabilities[i] ? 'individuals' : 'rings',
           acceptPred: (n) =>
             Math.sqrt(distanceSq(point(i, sites), point(n, sites))) <=
             Math.sqrt(siteSqRadii[i]!) + Math.sqrt(siteSqRadii[n]!),
@@ -287,6 +305,13 @@ self.onmessage = (
       );
 
       for (const j of intersectingRegions) {
+        if (siteStabilities[j] && !notVisited.has(j)) {
+          // Skip checking this (i, j) pair for swaps since j:
+          // - is stable, and
+          // - was checked for swaps in the last iteration.
+          // Which means all candidate swaps were declined on the last iteration.
+          continue;
+        }
         let swapped = false;
 
         const iLocation = point(i, sites);
@@ -333,6 +358,9 @@ self.onmessage = (
           tempStabilities[j] = false;
           update(i);
           update(j);
+        } else {
+          tempStabilities[i] = (tempStabilities[i] ?? true) && true;
+          tempStabilities[j] = (tempStabilities[j] ?? true) && true;
         }
 
         heap_i.length = 0;
@@ -347,10 +375,43 @@ self.onmessage = (
     // Stability check
     stable = true;
     for (const id of iota(numSites)) {
-      siteStabilities[id] = tempStabilities[id]!;
-      stable &&= tempStabilities[id]!;
+      const tempState = tempStabilities[id];
+      if (tempState === undefined) {
+        // Use Previous Site Stability
+        stable &&= siteStabilities[id]!;
+      } else {
+        // Update Site Stabilities
+        siteStabilities[id] = tempState;
+        stable &&= tempState;
+      }
     }
     console.log('Iteration is Stable:', stable);
+
+    // TODO: Check & Update handling of unvisited sites
+    //       - what if there are no neighbors within the distance?
+    //       - what if there are no samples within an overlap?
+    //       - how do we know that all/enough possibilities were explored?
+    /** The Sites that weren't visited at all by the end of the iteration */
+    const unvisitedIds = new Set(
+      tempStabilities.map((x, i) => (x === undefined ? i : undefined)),
+    );
+    unvisitedIds.delete(undefined);
+    // console.log('All prev unvisitied visited:', difference(notVisited, unvisitedIds).size === notVisited.size);
+    // console.log('New Unvisited:', difference(unvisitedIds, notVisited));
+    notVisited.clear();
+    union(notVisited, unvisitedIds as Set<number>);
+
+    // TODO: Check if this can cause an infinite loop
+    //       - If so, figure out how to prevent it...
+    for (const id of notVisited) {
+      if (!siteStabilities[id]) {
+        console.log('FORCED UNSTABLE ITERATION');
+        stable = false;
+        break;
+      }
+    }
+
+    unvisitedIds.clear();
   }
   console.log('Finished!');
 
