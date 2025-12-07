@@ -24,6 +24,7 @@ self.onmessage = (event: MessageEvent<WeightedMessage>) => {
   const centroids = new Float64Array(num * 2);
   /** The density for each centroid (sum of all weights in the region)*/
   const weights = new Float64Array(num);
+  const logValues = true;
 
   /**
    * Initialize Voronoi
@@ -100,6 +101,12 @@ self.onmessage = (event: MessageEvent<WeightedMessage>) => {
   );
 
   postMessage({ sites, cStar, capacities: weights, normCapErr });
+
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (logValues) {
+    console.log('Weighted Sites:');
+    console.log(sites.toString());
+  }
 
   close();
 };

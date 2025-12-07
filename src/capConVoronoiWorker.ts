@@ -30,6 +30,7 @@ self.onmessage = (
   const numSites = sites.length / 2;
   const numSamples = samples.length / 2;
   const assignmentOffset = Math.ceil(numSamples / numSites);
+  const logValues = true;
 
   if (numSamples / numSites < 1)
     throw new Error('Too few Samples and/or too many generator Sites');
@@ -139,6 +140,15 @@ self.onmessage = (
       regionAssignments,
       capacities: siteCapacities,
     } as RegionAssignments);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (logValues) {
+      console.log('Samples');
+      console.log(samples.toString());
+      console.log('Preliminary Region Assignments');
+      console.log(regionAssignments.toString());
+      console.log('Capacities');
+      console.log(siteCapacities.toString());
+    }
   } else {
     postMessage({ sites });
   }
@@ -405,7 +415,8 @@ self.onmessage = (
     capacities: siteCapacities,
   } as RegionAssignments);
 
-  console.log(regionAssignments.toString()); // Log Final Assignments before closure
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (logValues) console.log(regionAssignments.toString()); // Log Final Assignments before closure
 
   close();
 };
